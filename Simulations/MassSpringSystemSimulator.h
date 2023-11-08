@@ -1,13 +1,14 @@
 #ifndef MASSSPRINGSYSTEMSIMULATOR_h
 #define MASSSPRINGSYSTEMSIMULATOR_h
 #include "Simulator.h"
+#include "MassSpringComponents.h"
+#include <vector> // [TO-DO] verify if needed since Components.h already includes
 
 // Do Not Change
 #define EULER 0
 #define LEAPFROG 1
 #define MIDPOINT 2
 // Do Not Change
-
 
 class MassSpringSystemSimulator:public Simulator{
 public:
@@ -48,6 +49,10 @@ private:
 	float m_fStiffness;
 	float m_fDamping;
 	int m_iIntegrator;
+
+	// Control Attributes
+	vector<MassPoint*> m_massPoints;
+	vector<Spring*> m_springs;
 
 	// UI Attributes
 	Vec3 m_externalForce;
