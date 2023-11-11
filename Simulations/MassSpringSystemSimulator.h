@@ -39,7 +39,12 @@ public:
 	int getNumberOfSprings();
 	Vec3 getPositionOfMassPoint(int index);
 	Vec3 getVelocityOfMassPoint(int index);
+
+	// Simulation Functions
 	void applyExternalForce(Vec3 force);
+	void applyInternalForce(int indexSpring);
+	void integratePosition(int indexPoint, float timeStep);
+	void integrateVelocity(int indexPoint, float timeStep);
 
 	// Set Up Functions
 	void setUp2PointSystem();
