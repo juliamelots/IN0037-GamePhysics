@@ -10,6 +10,9 @@
 #define MIDPOINT 2
 // Do Not Change
 
+#define STD_FIXED 0
+#define STD_SPHERE_SIZE 0.05
+
 class MassSpringSystemSimulator:public Simulator{
 public:
 	// Construtors
@@ -37,6 +40,9 @@ public:
 	Vec3 getPositionOfMassPoint(int index);
 	Vec3 getVelocityOfMassPoint(int index);
 	void applyExternalForce(Vec3 force);
+
+	// Set Up Functions
+	void setUp2PointSystem();
 	
 	// Do Not Change
 	void setIntegrator(int integrator) {
