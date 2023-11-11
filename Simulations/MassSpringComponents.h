@@ -6,58 +6,35 @@
 class MassPoint {
 public:
 	// Construtors
+	MassPoint();
 	MassPoint(Vec3 position, Vec3 velocity, bool isFixed);
 
-	// Specific Functions
-	void setPosition(Vec3 position);
-	void setVelocity(Vec3 velocity);
-	Vec3 getPosition();
-	Vec3 getVelocity();
-	bool getIsFixed();
-
-private:
 	// Data Attributes
 	Vec3 m_position;
 	Vec3 m_velocity;
 	bool m_bIsFixed;
+
 };
 
-void MassPoint::setPosition(Vec3 position)
+MassPoint::MassPoint()
+{
+	m_position = Vec3();
+	m_velocity = Vec3();
+	m_bIsFixed = false;
+}
+
+MassPoint::MassPoint(Vec3 position, Vec3 velocity, bool isFixed)
 {
 	m_position = position;
-}
-
-void MassPoint::setVelocity(Vec3 velocity)
-{
 	m_velocity = velocity;
-}
-
-Vec3 MassPoint::getPosition()
-{
-	return m_position;
-}
-
-Vec3 MassPoint::getVelocity()
-{
-	return m_velocity;
-}
-
-bool MassPoint::getIsFixed()
-{
-	return m_bIsFixed;
+	m_bIsFixed = isFixed;
 }
 
 class Spring {
 public:
+	Spring();
 	Spring(MassPoint point1, MassPoint point2, float initialLength);
 
-	// Specific Functions
-	void addToLength(float displacement);
-	vector<MassPoint*> getMassPoints();
-	float getInitialLength();
-	float getCurrentLength();
-
-private:
 	// Data Attributes
 	MassPoint m_point1;
 	MassPoint m_point2;
@@ -65,25 +42,18 @@ private:
 	float m_fCurrentLength;
 };
 
-void Spring::addToLength(float displacement)
+Spring::Spring()
 {
-	m_fCurrentLength += displacement;
+	m_point1 = MassPoint();
+	m_point2 = MassPoint();
+	m_fInitialLength = m_fCurrentLength = 0.0;
 }
 
-vector<MassPoint*> Spring::getMassPoints()
+Spring::Spring(MassPoint point1, MassPoint point2, float initialLength)
 {
-	vector<MassPoint*> endpoints{ &m_point1, &m_point2 };
-	return endpoints;
-}
-
-float Spring::getInitialLength()
-{
-	return m_fInitialLength;
-}
-
-float Spring::getCurrentLength()
-{
-	return m_fCurrentLength;
+	m_point1 = point1;
+	m_point2 = point2;
+	m_fInitialLength = m_fCurrentLength = initialLength;
 }
 
 #endif
