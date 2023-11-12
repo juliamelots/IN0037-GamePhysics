@@ -1,39 +1,30 @@
 #include "Point.h"
+#include <iostream>
 
+Point::Point(Vec3 position, Vec3 velocity, bool isFixed) {
+	this->velocity = velocity;
+	this->position = position;
+	this->isFixed = isFixed;
+}
 
-class Point {
+void Point::setDamping(float dampingFactor) {
+	force = -velocity * dampingFactor;
+}
 
-public:
-	Point() {}
-	Point(Vec3 position, Vec3 velocity, bool isFixed) {
-		this->velocity = velocity;
-		this->position = position;
-		this->isFixed = isFixed;
-	}
+void Point::addSpringForce(Vec3 force) {
+	this->force += force;
+	std::cout << "force: " << this->force << std::endl;
+}
 
-	void setDamping(float dampingFactor) {
-		force = -velocity * dampingFactor;
-	}
+void Point::movePoint(float timeStep) {
+	if (isFixed) return;
+	position += velocity * timeStep;
+	std::cout << "position: " << position << std::endl;
+}
 
-	void addSpringForce(Vec3 force) {
-		force += force;
-	}
+void Point::setSpeed(Vec3 externalForce, float mass, float timeStep) {
+	if (isFixed) return;
+	velocity += ((force + externalForce) / mass) * timeStep;
+	std::cout << "velocity: " << velocity << std::endl;
 
-	void movePoint(float timeStep) {
-		if (isFixed) return;
-		position += velocity * timeStep;
-	}
-
-	void setSpeed(Vec3 externalForce, float mass, float timeStep) {
-		if (isFixed) return;
-		velocity += ((force + externalForce) / mass) * timeStep;
-	}
-
-
-private:
-	Vec3 position;
-	Vec3 velocity;
-	Vec3 force;
-	bool isFixed;
-
-};
+}

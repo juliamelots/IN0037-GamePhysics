@@ -1,114 +1,150 @@
 #include "MassSpringSystemSimulator.h"
 
-class MassSpringSystemSimulator : public Simulator {
+MassSpringSystemSimulator::MassSpringSystemSimulator() {
+	setMass(10);
+	setStiffness(40);
+	addMassPoint(Vec3(0,0,0), Vec3(-1,0,0), false);
+	addMassPoint(Vec3(0, 2, 0), Vec3(1, 0, 0), false);
+	addSpring(0,1,1);
+	m_fSphereSize = 0.05f * Vec3(1,1,1);
+	m_fDamping = 0.0f;
+	setIntegrator(EULER);
+}
 
+const char* MassSpringSystemSimulator::getTestCasesStr()
+{
+	return nullptr;
+}
 
-	void setMass(float mass) {
-		m_fMass = mass;
+void MassSpringSystemSimulator::initUI(DrawingUtilitiesClass* DUC)
+{
+	this->DUC = DUC;
+}
+
+void MassSpringSystemSimulator::reset()
+{
+	m_mouse.x = m_mouse.y = 0;
+	m_trackmouse.x = m_trackmouse.y = 0;
+	m_oldtrackmouse.x = m_oldtrackmouse.y = 0;
+}
+
+void MassSpringSystemSimulator::drawFrame(ID3D11DeviceContext* pd3dImmediateContext)
+{
+	std::mt19937 eng;
+	std::uniform_real_distribution<float> randCol(0.0f, 1.0f);
+	for (Point point : points) {
+		DUC->setUpLighting(Vec3(), 0.4 * Vec3(1, 1, 1), 100, 0.6 * Vec3(randCol(eng), randCol(eng), randCol(eng)));
+		DUC->drawSphere(point.getPosition(), m_fSphereSize);
 	}
-
-	void setStiffness(float stiffness) {
-		m_fStiffness = stiffness;
+	DUC->beginLine();
+	for (Spring spring : springs) {
+	std:cout << points[spring.point1].getPosition() << " " << points[spring.point2].getPosition() << std :: endl;
+		DUC->drawLine(points[spring.point1].getPosition(), Vec3(0.5f,0.5f,0.5f), points[spring.point2].getPosition(), Vec3(0.5f,0.5f,0.5f));
 	}
+	DUC->endLine();
+}
 
-	void setDampingFactor(float damping) {
-		m_fDamping = damping;
-	}
+void MassSpringSystemSimulator::notifyCaseChanged(int testCase)
+{
+}
 
-	int addMassPoint(Vec3 position, Vec3 Velocity, bool isFixed) {
-		Point newPoint = Point(position, Velocity, isFixed);
-		points.push_back(newPoint);
-	}
+void MassSpringSystemSimulator::externalForcesCalculations(float timeElapsed)
+{
+}
 
-	void addSpring(int masspoint1, int masspoint2, float initialLength) {
-		Spring newSpring = Spring(masspoint1, masspoint2, initialLength);
-	}
+void MassSpringSystemSimulator::setMass(float mass) {
+	m_fMass = mass;
+}
 
-	int getNumberOfMassPoints() {
-		return positions.size();
-	}
+void MassSpringSystemSimulator::setStiffness(float stiffness) {
+	m_fStiffness = stiffness;
+}
 
-	int getNumberOfSprings() {
-		return springs.size();
-	}
+void MassSpringSystemSimulator::setDampingFactor(float damping) {
+	m_fDamping = damping;
+}
 
-	Vec3 getPositionOfMassPoint(int index) {
-		return points[index].getPosition();
-	}
+int MassSpringSystemSimulator::addMassPoint(Vec3 position, Vec3 Velocity, bool isFixed) {
+	Point newPoint = Point(position, Velocity, isFixed);
+	points.push_back(newPoint);
+	return points.size();
+}
 
-	Vec3 getVelocityOfMassPoint(int index) {
-		return points[index].getVelocity();
-	}
+void MassSpringSystemSimulator::addSpring(int masspoint1, int masspoint2, float initialLength) {
+	Spring newSpring = Spring(masspoint1, masspoint2, initialLength);
+	springs.push_back(newSpring);
+}
 
-	void applyExternalForce(Vec3 force) {
+int MassSpringSystemSimulator::getNumberOfMassPoints() {
+	return points.size();
+}
 
-	}
+int MassSpringSystemSimulator::getNumberOfSprings() {
+	return springs.size();
+}
 
-	void simulateTimeStep(float timeStep) {
-		//Calculate current force on all Points
-		SetForces();
-		//Move every point
-		if (m_iIntegrator == EULER) {
-			for (Point point : points) {
-				point.movePoint(timeStep);
-				point.setSpeed(m_externalForce, m_fMass, timeStep);
-			}
+Vec3 MassSpringSystemSimulator::getPositionOfMassPoint(int index) {
+	return points[index].getPosition();
+}
+
+Vec3 MassSpringSystemSimulator::getVelocityOfMassPoint(int index) {
+	return points[index].getVelocity();
+}
+
+void MassSpringSystemSimulator::applyExternalForce(Vec3 force) {
+	m_externalForce = force;
+}
+
+void MassSpringSystemSimulator::simulateTimestep(float timeStep) {
+	//Calculate current force on all Points
+	setForces();
+	//Move every point
+	if (m_iIntegrator == EULER) {
+		for (Point& point : points) {
+			point.movePoint(timeStep);
+			point.setSpeed(m_externalForce, m_fMass, timeStep);
 		}
-		else if (m_iIntegrator == MIDPOINT) {
-			var halfTimeStep = timeStep / 2;
-			for (Point point : points) {
-				point.movePoint(halfTimeStep);
-				point.setSpeed(m_externalForce, m_fMass, halfTimeStep);
-			}
-			SetForces();
-			for (Point point : points) {
-				point.movePoint(halfTimeStep);
-				point.setSpeed(m_externalForce, m_fMass, halfTimeStep);
-			}
-		}
-		else if (m_iIntegrator == LEAPFROG) {
-			for (Point point : points) {
-				point.setSpeed(m_externalForce, m_fMass, timeStep);
-				point.movePoint(timeStep);
-			}
-		}
 	}
-
-	void SetForces() {
+	else if (m_iIntegrator == MIDPOINT) {
+		float halfTimeStep = timeStep / 2;
 		for (Point point : points) {
-			point.setDamping(m_fDamping);
+			point.movePoint(halfTimeStep);
+			point.setSpeed(m_externalForce, m_fMass, halfTimeStep);
 		}
-		for (Spring spring : springs) {
-			Point firstPoint = points[spring.point1];
-			Point secondPoint = points[spring.point2];
-			Vec3 delta = firstPoint.getPosition() - secondPoint.getPosition();
-			float springSize = normalize(delta);
-			float springForce = (springSize - spring.initialLength) * m_fStiffness;
-			secondPoint.addSpringForce(springForce * delta);
-			firstPoint.addSpringForce((-springForce) * delta);
+		setForces();
+		for (Point point : points) {
+			point.movePoint(halfTimeStep);
+			point.setSpeed(m_externalForce, m_fMass, halfTimeStep);
 		}
 	}
-
-
-private:
-	float length(Vec3 vector) {
-		return 
+	else if (m_iIntegrator == LEAPFROG) {
+		for (Point point : points) {
+			point.setSpeed(m_externalForce, m_fMass, timeStep);
+			point.movePoint(timeStep);
+		}
 	}
+}
 
+void MassSpringSystemSimulator::onClick(int x, int y)
+{
+}
 
-private:
-	// Data Attributes 
-	float m_fMass;
-	float m_fStiffness;
-	float m_fDamping;
-	int m_iIntegrator;
-	std::vector<Point> points;
-	std::vector<Spring> springs;
+void MassSpringSystemSimulator::onMouse(int x, int y)
+{
+}
 
+void MassSpringSystemSimulator::setForces() {
+	for (Point& point : points) {
+		point.setDamping(m_fDamping);
+	}
+	for (Spring spring : springs) {
+		Point& firstPoint = points[spring.point1];
+		Point& secondPoint = points[spring.point2];
+		Vec3 delta = firstPoint.getPosition() - secondPoint.getPosition();
 
-	// UI Attributes
-	Vec3 m_externalForce;
-	Point2D m_mouse;
-	Point2D m_trackmouse;
-	Point2D m_oldtrackmouse;
-};
+		float springSize = normalize(delta);
+		float springForce = (springSize - spring.initialLength) * m_fStiffness;
+		secondPoint.addSpringForce(springForce * delta);
+		firstPoint.addSpringForce((-springForce) * delta);
+	}
+}

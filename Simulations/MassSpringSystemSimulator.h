@@ -45,11 +45,17 @@ public:
 	}
 
 private:
+	void setForces();
+
+private:
 	// Data Attributes
 	float m_fMass;
 	float m_fStiffness;
 	float m_fDamping;
+	Vec3 m_fSphereSize;
 	int m_iIntegrator;
+	std::vector<Point> points;
+	std::vector<Spring> springs;
 
 	// UI Attributes
 	Vec3 m_externalForce;
