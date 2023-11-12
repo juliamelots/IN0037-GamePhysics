@@ -2,7 +2,6 @@
 #define MASSSPRINGSYSTEMSIMULATOR_h
 #include "Simulator.h"
 #include "MassSpringComponents.h"
-#include <vector> // [TO-DO] verify if needed since Components.h already includes
 
 // Do Not Change
 #define EULER 0
@@ -42,9 +41,10 @@ public:
 
 	// Simulation Functions
 	void applyExternalForce(Vec3 force);
-	void applyInternalForce(int indexSpring);
-	void integratePosition(int indexPoint, float timeStep);
-	void integrateVelocity(int indexPoint, float timeStep);
+	void applyInternalForce(Spring* spring);
+	Vec3 applyInternalForce(Vec3 position, Vec3 velocity, vector<int> attachedSprings);
+	Vec3 integratePosition(Vec3 position, Vec3 velocity, float timeStep);
+	Vec3 integrateVelocity(Vec3 velocity, Vec3 internalForce, float timeStep);
 
 	// Set Up Functions
 	void setUp2PointSystem();

@@ -2,19 +2,10 @@
 
 MassSpringSystemSimulator::MassSpringSystemSimulator()
 {
-	// Set initial data attributes
 	m_fMass = 0;
 	m_fStiffness = 0;
 	m_fDamping = 0;
-	setIntegrator(0);
-
-	// Set initial control attributes
-	// [TO-DO] apparently not needed?
-	// m_massPoints = new vector<MassPoint*>();
-	// m_springs = new vector<Spring*>();
-
-	// Set initial UI attributes
-	m_externalForce = Vec3();
+	m_iIntegrator = EULER;
 }
 
 // UI Functions
@@ -26,19 +17,20 @@ const char* MassSpringSystemSimulator::getTestCasesStr()
 void MassSpringSystemSimulator::initUI(DrawingUtilitiesClass* DUC)
 {
 	this->DUC = DUC;
+	TwType method;
 	switch (m_iTestCase)
 	{
 	// [TO-DO] don't allow custom time step for all demos except 4
 	case 3:
-		TwType TW_TYPE_METHOD = TwDefineEnumFromString("Integrator Method", "Euler,Leap-Frog,Midpoint");
-		TwAddVarRW(DUC->g_pTweakBar, "Integrator Method", TW_TYPE_METHOD, &m_iIntegrator, "");
+		method = TwDefineEnumFromString("Integrator Method", "Euler,Leap-Frog,Midpoint");
+		TwAddVarRW(DUC->g_pTweakBar, "Integrator Method", method, &m_iIntegrator, "");
 		break;
 	default:break;
 	}
 }
 
 void MassSpringSystemSimulator::reset() {
-	m_externalForce = m_externalForce.ZERO;
+	m_externalForce = Vec3();
 	m_mouse.x = m_mouse.y = 0;
 	m_trackmouse.x = m_trackmouse.y = 0;
 	m_oldtrackmouse.x = m_oldtrackmouse.y = 0;
@@ -67,12 +59,12 @@ void MassSpringSystemSimulator::notifyCaseChanged(int testCase)
 	switch (m_iTestCase)
 	{
 	case 0:
-		cout << "Demo 1: simple one-step test\n";
-		setUp2PointSystem();
-		setIntegrator(EULER);
-		simulateTimestep(0.1);
-		setIntegrator(MIDPOINT);
-		simulateTimestep(0.1);
+		//cout << "Demo 1: simple one-step test\n";
+		//setUp2PointSystem();
+		//setIntegrator(EULER);
+		//simulateTimestep(0.1);
+		//setIntegrator(MIDPOINT);
+		//simulateTimestep(0.1);
 		break;
 	case 1:
 		cout << "Demo 2: simple Euler simulation\n";
@@ -105,24 +97,24 @@ void MassSpringSystemSimulator::notifyCaseChanged(int testCase)
 
 void MassSpringSystemSimulator::externalForcesCalculations(float timeElapsed)
 {
-	// Apply the mouse deltas to g_vfMovableObjectPos (move along cameras view plane)
-	Point2D mouseDiff;
-	mouseDiff.x = m_trackmouse.x - m_oldtrackmouse.x;
-	mouseDiff.y = m_trackmouse.y - m_oldtrackmouse.y;
-	if (mouseDiff.x != 0 || mouseDiff.y != 0)
-	{
-		Mat4 worldViewInv = Mat4(DUC->g_camera.GetWorldMatrix() * DUC->g_camera.GetViewMatrix());
-		worldViewInv = worldViewInv.inverse();
-		Vec3 inputView = Vec3((float)mouseDiff.x, (float)-mouseDiff.y, 0);
-		Vec3 inputWorld = worldViewInv.transformVectorNormal(inputView);
-		// find a proper scale!
-float inputScale = 0.001f;
-inputWorld = inputWorld * inputScale;
-m_vfMovableObjectPos = m_vfMovableObjectFinalPos + inputWorld;
-	}
-	else {
-		m_vfMovableObjectFinalPos = m_vfMovableObjectPos;
-	}
+//	// Apply the mouse deltas to g_vfMovableObjectPos (move along cameras view plane)
+//	Point2D mouseDiff;
+//	mouseDiff.x = m_trackmouse.x - m_oldtrackmouse.x;
+//	mouseDiff.y = m_trackmouse.y - m_oldtrackmouse.y;
+//	if (mouseDiff.x != 0 || mouseDiff.y != 0)
+//	{
+//		Mat4 worldViewInv = Mat4(DUC->g_camera.GetWorldMatrix() * DUC->g_camera.GetViewMatrix());
+//		worldViewInv = worldViewInv.inverse();
+//		Vec3 inputView = Vec3((float)mouseDiff.x, (float)-mouseDiff.y, 0);
+//		Vec3 inputWorld = worldViewInv.transformVectorNormal(inputView);
+//		// find a proper scale!
+//float inputScale = 0.001f;
+//inputWorld = inputWorld * inputScale;
+//m_vfMovableObjectPos = m_vfMovableObjectFinalPos + inputWorld;
+//	}
+//	else {
+//		m_vfMovableObjectFinalPos = m_vfMovableObjectPos;
+//	}
 }
 
 void MassSpringSystemSimulator::simulateTimestep(float timeStep)
@@ -130,22 +122,40 @@ void MassSpringSystemSimulator::simulateTimestep(float timeStep)
 	// update current setup for each frame using selected integration method
 	switch (m_iIntegrator)
 	{
-	case EULER:
-		for (int i = 0; i < getNumberOfSprings(); i++)
-		{
-			applyExternalForce(i);
-		}
-		for (int i = 0; i < getNumberOfMassPoints(); i++)
-		{
-			integratePosition(i, timeStep);
-			integrateVelocity(i, timeStep);
-		}
-		break;
-	case LEAPFROG:
-		break;
-	case MIDPOINT:
-		break;
-	default:break;
+		case EULER:
+			for (int i = 0; i < getNumberOfSprings(); i++)
+			{
+				Spring* spring = m_springs.at(i);
+				applyInternalForce(spring);
+			}
+			for (int i = 0; i < getNumberOfMassPoints(); i++)
+			{	
+				MassPoint* masspoint = m_massPoints.at(i);
+				masspoint->m_position = integratePosition(masspoint->m_position, masspoint->m_velocity, timeStep);
+				masspoint->m_velocity = integrateVelocity(masspoint->m_velocity, masspoint->m_internalForce, timeStep);
+				masspoint->m_internalForce = Vec3();
+			}
+			break;
+		case LEAPFROG:
+			break;
+		case MIDPOINT:
+			for (int i = 0; i < getNumberOfSprings(); i++)
+			{
+				Spring* spring = m_springs.at(i);
+				applyInternalForce(spring);
+			}
+			for (int i = 0; i < getNumberOfMassPoints(); i++)
+			{
+				MassPoint* masspoint = m_massPoints.at(i);
+				Vec3 tempPosition = integratePosition(masspoint->m_position, masspoint->m_velocity, timeStep / 2.0);
+				Vec3 tempVelocity = integrateVelocity(masspoint->m_velocity, masspoint->m_internalForce, timeStep / 2.0);
+				Vec3 tempInternalForce = applyInternalForce(tempPosition, tempVelocity, masspoint->m_attachedSprings);
+				masspoint->m_position = integratePosition(masspoint->m_position, tempVelocity, timeStep);
+				masspoint->m_velocity = integrateVelocity(masspoint->m_velocity, tempInternalForce, timeStep);
+				masspoint->m_internalForce = Vec3(); // reset
+			}
+			break;
+		default:break;
 	}
 }
 
@@ -183,11 +193,14 @@ int MassSpringSystemSimulator::addMassPoint(Vec3 position, Vec3 Velocity, bool i
 {
 	MassPoint* massPoint = new MassPoint(position, Velocity, isFixed);
 	m_massPoints.push_back(massPoint);
+	return m_massPoints.size() - 1;
 }
 
 void MassSpringSystemSimulator::addSpring(int masspoint1, int masspoint2, float initialLength)
 {
 	Spring* spring = new Spring(masspoint1, masspoint2, initialLength);
+	m_massPoints.at(masspoint1)->m_attachedSprings.push_back(m_springs.size());
+	m_massPoints.at(masspoint2)->m_attachedSprings.push_back(m_springs.size());
 	m_springs.push_back(spring);
 }
 
@@ -218,34 +231,53 @@ void MassSpringSystemSimulator::applyExternalForce(Vec3 force)
 	// [TO-DO]
 }
 
-void MassSpringSystemSimulator::applyInternalForce(int indexSpring)
+void MassSpringSystemSimulator::applyInternalForce(Spring* spring)
 {	
-	Spring* spring = m_springs.at(indexSpring);
-	float independentTerm = -m_fStiffness
-							* (spring->m_fCurrentLength - spring->m_fCurrentLength)
-							/ spring->m_fCurrentLength;
+	float springTerm = -m_fStiffness
+					   * (spring->m_fCurrentLength - spring->m_fCurrentLength)
+					   / spring->m_fCurrentLength;
 	MassPoint* point1 = m_massPoints.at(spring->m_iPoint1);
 	MassPoint* point2 = m_massPoints.at(spring->m_iPoint2);
-	point1->m_internalForce += independentTerm * (point1->m_position - point2->m_position);
-	point2->m_internalForce += independentTerm * (point2->m_position - point1->m_position);
+	point1->m_internalForce += springTerm * (point1->m_position - point2->m_position);
+	point2->m_internalForce += springTerm * (point2->m_position - point1->m_position);
 }
 
-void MassSpringSystemSimulator::integratePosition(int indexPoint, float timeStep)
+Vec3 MassSpringSystemSimulator::applyInternalForce(Vec3 position, Vec3 velocity, vector<int> attachedSprings)
 {
-	MassPoint* masspoint = m_massPoints.at(indexPoint);
-	masspoint->m_position += timeStep * masspoint->m_velocity;
+	Vec3 internalForce = Vec3();
+	for (int i = 0; i < attachedSprings.size(); i++)
+	{
+		Spring* spring = m_springs.at(i);
+		MassPoint* point1 = m_massPoints.at(spring->m_iPoint1);
+		MassPoint* point2 = m_massPoints.at(spring->m_iPoint2);
+		float springTerm = -m_fStiffness
+						   * (spring->m_fCurrentLength - spring->m_fCurrentLength)
+						   / spring->m_fCurrentLength;
+		// unknown which of the endpoints is the current masspoint
+		// distance between current masspoint and both of the endpoints are calculated
+		// one will be zero (current masspoint = endpoint) and other will be desired value
+		Vec3 distance = (point1->m_position - point2->m_position)
+						+ (point2->m_position - point1->m_position);
+		internalForce += springTerm * distance;
+	}
+	return internalForce;
 }
 
-void MassSpringSystemSimulator::integrateVelocity(int indexPoint, float timeStep)
+Vec3 MassSpringSystemSimulator::integratePosition(Vec3 position, Vec3 velocity, float timeStep)
 {
-	MassPoint* masspoint = m_massPoints.at(indexPoint);
-	Vec3 acceleration = (masspoint->m_internalForce - m_fDamping * masspoint->m_velocity) / m_fMass;
-	masspoint->m_velocity += timeStep * acceleration;
-	masspoint->m_internalForce = masspoint->m_internalForce.ZERO;
+	return position + timeStep * velocity;
+}
+
+Vec3 MassSpringSystemSimulator::integrateVelocity(Vec3 velocity, Vec3 internalForce, float timeStep)
+{
+	Vec3 acceleration = (internalForce - m_fDamping * velocity) / m_fMass;
+	return velocity + timeStep * acceleration;
 }
 
 void MassSpringSystemSimulator::setUp2PointSystem()
-{
+{	
+	m_massPoints.clear();
+	m_springs.clear();
 	setMass(10.0);
 	setStiffness(40);
 	addMassPoint(Vec3(0, 0, 0), Vec3(-1, 0, 0), STD_FIXED);
