@@ -17,13 +17,13 @@ const char* MassSpringSystemSimulator::getTestCasesStr()
 void MassSpringSystemSimulator::initUI(DrawingUtilitiesClass* DUC)
 {
 	this->DUC = DUC;
-	TwType method;
 	switch (m_iTestCase)
 	{
 	// [TO-DO] don't allow custom time step for all demos except 4
 	case 3:
-		method = TwDefineEnumFromString("Integrator Method", "Euler,Leap-Frog,Midpoint");
-		TwAddVarRW(DUC->g_pTweakBar, "Integrator Method", method, &m_iIntegrator, "");
+		TwAddVarRW(DUC->g_pTweakBar, "Integrator Method",
+				   TwDefineEnumFromString("Integrator Method", "Euler,Leap-Frog,Midpoint"),
+				   &m_iIntegrator, "");
 		break;
 	default:break;
 	}
@@ -40,15 +40,15 @@ void MassSpringSystemSimulator::drawFrame(ID3D11DeviceContext* pd3dImmediateCont
 {
 	for (int i = 0; i < getNumberOfMassPoints(); i++)
 	{
-		DUC->setUpLighting(Vec3(), 0.4 * Vec3(1, 1, 1), 100, 0.6 * Vec3());
+		DUC->setUpLighting(Vec3(1,0,0), 0.4 * Vec3(1, 1, 1), 100, 0.6 * Vec3());
 		DUC->drawSphere(getPositionOfMassPoint(i), Vec3(STD_SPHERE_SIZE, STD_SPHERE_SIZE, STD_SPHERE_SIZE));
 	}
 	for (int i = 0; i < getNumberOfSprings(); i++)
 	{
 		Spring* spring = m_springs.at(i);
 		DUC->beginLine();
-		DUC->drawLine(getPositionOfMassPoint(spring->m_iPoint1), Vec3(0, 1, 0),
-					  getPositionOfMassPoint(spring->m_iPoint2), Vec3(0, 1, 0));
+		DUC->drawLine(spring->m_point1->m_position, Vec3(0, 1, 0),
+					  spring->m_point2->m_position, Vec3(0, 1, 0));
 		DUC->endLine();
 	}
 }
@@ -59,12 +59,20 @@ void MassSpringSystemSimulator::notifyCaseChanged(int testCase)
 	switch (m_iTestCase)
 	{
 	case 0:
-		//cout << "Demo 1: simple one-step test\n";
-		//setUp2PointSystem();
-		//setIntegrator(EULER);
-		//simulateTimestep(0.1);
-		//setIntegrator(MIDPOINT);
-		//simulateTimestep(0.1);
+		cout << "Demo 1: simple one-step test\n";
+		setUp2PointSystem();
+		setIntegrator(EULER);
+		simulateTimestep(0.1);
+		cout << "euler ";
+		printFrame();
+
+		setUp2PointSystem();
+		setIntegrator(MIDPOINT);
+		simulateTimestep(0.1);
+		cout << "midpoint ";
+		printFrame();
+
+		// [TO-DO] limit Demo 1 to only these steps
 		break;
 	case 1:
 		cout << "Demo 2: simple Euler simulation\n";
@@ -196,11 +204,13 @@ int MassSpringSystemSimulator::addMassPoint(Vec3 position, Vec3 Velocity, bool i
 	return m_massPoints.size() - 1;
 }
 
-void MassSpringSystemSimulator::addSpring(int masspoint1, int masspoint2, float initialLength)
+void MassSpringSystemSimulator::addSpring(int indexPoint1, int indexPoint2, float initialLength)
 {
-	Spring* spring = new Spring(masspoint1, masspoint2, initialLength);
-	m_massPoints.at(masspoint1)->m_attachedSprings.push_back(m_springs.size());
-	m_massPoints.at(masspoint2)->m_attachedSprings.push_back(m_springs.size());
+	MassPoint* point1 = m_massPoints.at(indexPoint1);
+	MassPoint* point2 = m_massPoints.at(indexPoint2);
+	Spring* spring = new Spring(point1, point2, initialLength);
+	point1->m_attachedSprings.push_back(m_springs.size());
+	point2->m_attachedSprings.push_back(m_springs.size());
 	m_springs.push_back(spring);
 }
 
@@ -226,6 +236,7 @@ Vec3 MassSpringSystemSimulator::getVelocityOfMassPoint(int index)
 	return massPoint->m_velocity;
 }
 
+// Simulation Functions
 void MassSpringSystemSimulator::applyExternalForce(Vec3 force)
 {
 	// [TO-DO]
@@ -234,12 +245,12 @@ void MassSpringSystemSimulator::applyExternalForce(Vec3 force)
 void MassSpringSystemSimulator::applyInternalForce(Spring* spring)
 {	
 	float springTerm = -m_fStiffness
-					   * (spring->m_fCurrentLength - spring->m_fCurrentLength)
-					   / spring->m_fCurrentLength;
-	MassPoint* point1 = m_massPoints.at(spring->m_iPoint1);
-	MassPoint* point2 = m_massPoints.at(spring->m_iPoint2);
-	point1->m_internalForce += springTerm * (point1->m_position - point2->m_position);
-	point2->m_internalForce += springTerm * (point2->m_position - point1->m_position);
+					   * (spring->getCurrentLength() - spring->m_fInitialLength)
+					   / spring->getCurrentLength();
+	cout << spring->getCurrentLength() << "\n";
+	spring->m_point1->m_internalForce += springTerm * (spring->m_point1->m_position - spring->m_point2->m_position);
+	spring->m_point2->m_internalForce += springTerm * (spring->m_point2->m_position - spring->m_point1->m_position);
+	cout << springTerm << "\n";
 }
 
 Vec3 MassSpringSystemSimulator::applyInternalForce(Vec3 position, Vec3 velocity, vector<int> attachedSprings)
@@ -248,16 +259,14 @@ Vec3 MassSpringSystemSimulator::applyInternalForce(Vec3 position, Vec3 velocity,
 	for (int i = 0; i < attachedSprings.size(); i++)
 	{
 		Spring* spring = m_springs.at(i);
-		MassPoint* point1 = m_massPoints.at(spring->m_iPoint1);
-		MassPoint* point2 = m_massPoints.at(spring->m_iPoint2);
 		float springTerm = -m_fStiffness
-						   * (spring->m_fCurrentLength - spring->m_fCurrentLength)
-						   / spring->m_fCurrentLength;
+						   * (spring->getCurrentLength() - spring->m_fInitialLength)
+						   / spring->getCurrentLength();
 		// unknown which of the endpoints is the current masspoint
 		// distance between current masspoint and both of the endpoints are calculated
 		// one will be zero (current masspoint = endpoint) and other will be desired value
-		Vec3 distance = (point1->m_position - point2->m_position)
-						+ (point2->m_position - point1->m_position);
+		Vec3 distance = (spring->m_point1->m_position - spring->m_point2->m_position)
+						+ (spring->m_point2->m_position - spring->m_point1->m_position);
 		internalForce += springTerm * distance;
 	}
 	return internalForce;
@@ -280,7 +289,18 @@ void MassSpringSystemSimulator::setUp2PointSystem()
 	m_springs.clear();
 	setMass(10.0);
 	setStiffness(40);
-	addMassPoint(Vec3(0, 0, 0), Vec3(-1, 0, 0), STD_FIXED);
-	addMassPoint(Vec3(0, 2, 0), Vec3(1, 0, 0), STD_FIXED);
-	addSpring(0, 1, 1.0);
+	addMassPoint(Vec3(0, 0, 0), Vec3(-0.1, 0, 0), STD_FIXED);
+	addMassPoint(Vec3(0, 0.2, 0), Vec3(0.1, 0, 0), STD_FIXED);
+	addSpring(0, 1, 0.1);
+}
+
+void MassSpringSystemSimulator::printFrame()
+{
+	for (int i = 0; i < getNumberOfMassPoints(); i++)
+	{
+		MassPoint* masspoint = m_massPoints.at(i);
+		cout << "pos: " <<  masspoint->m_position
+			 << " vel: " << masspoint->m_velocity
+			 << " for: " << masspoint->m_internalForce << "\n";
+	}
 }

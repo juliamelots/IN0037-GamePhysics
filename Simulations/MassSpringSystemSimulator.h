@@ -33,7 +33,7 @@ public:
 	void setStiffness(float stiffness);
 	void setDampingFactor(float damping);
 	int addMassPoint(Vec3 position, Vec3 Velocity, bool isFixed);
-	void addSpring(int masspoint1, int masspoint2, float initialLength);
+	void addSpring(int indexPoint1, int indexPoint2, float initialLength);
 	int getNumberOfMassPoints();
 	int getNumberOfSprings();
 	Vec3 getPositionOfMassPoint(int index);
@@ -48,6 +48,7 @@ public:
 
 	// Set Up Functions
 	void setUp2PointSystem();
+	void printFrame();
 	
 	// Do Not Change
 	void setIntegrator(int integrator) {
