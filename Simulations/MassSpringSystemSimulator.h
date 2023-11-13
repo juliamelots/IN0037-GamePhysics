@@ -29,8 +29,8 @@ public:
 	void setMass(float mass);
 	void setStiffness(float stiffness);
 	void setDampingFactor(float damping);
-	int addMassPoint(Vec3 position, Vec3 Velocity, bool isFixed);
-	void addSpring(int masspoint1, int masspoint2, float initialLength);
+	int addMassPoint(Vec3 position, Vec3 velocity, bool isFixed);
+	void addSpring(int indexPoint1, int indexPoint2, float initialLength);
 	int getNumberOfMassPoints();
 	int getNumberOfSprings();
 	Vec3 getPositionOfMassPoint(int index);
@@ -48,11 +48,51 @@ private:
 	float m_fStiffness;
 	float m_fDamping;
 	int m_iIntegrator;
+	vector<MassPoint*> m_vMassPoints;
+	vector<Spring*> m_vSprings;
 
 	// UI Attributes
 	Vec3 m_externalForce;
 	Point2D m_mouse;
 	Point2D m_trackmouse;
 	Point2D m_oldtrackmouse;
+};
+
+class MassPoint {
+public:
+	// Constructors
+	MassPoint(Vec3 position, Vec3 velocity, bool isFixed)
+	{
+		m_position = position;
+		m_velocity = velocity;
+		m_internalForce = Vec3();
+		m_bIsFixed = isFixed;
+	};
+
+	// Data Attributes
+	Vec3 m_position;
+	Vec3 m_velocity;
+	Vec3 m_internalForce;
+	bool m_bIsFixed;
+
+};
+
+class Spring {
+public:
+	// Constructors
+	Spring(MassPoint* point1, MassPoint* point2, float initialLength)
+	{
+		m_point1 = point1;
+		m_point2 = point2;
+		m_fInitialLength = initialLength;
+	};
+
+	// Data Attributes
+	MassPoint* m_point1;
+	MassPoint* m_point2;
+	float m_fInitialLength;
+
+	// Specific Functions
+	float getCurrentLength() { return norm(m_point1->m_position - m_point2->m_position); };
 };
 #endif
