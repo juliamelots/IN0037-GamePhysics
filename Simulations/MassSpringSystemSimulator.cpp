@@ -19,20 +19,20 @@ void MassSpringSystemSimulator::initUI(DrawingUtilitiesClass* DUC)
 	this->DUC = DUC;
 	switch (m_iTestCase)
 	{
-		case 0:
-			break;
-		case 1:
-			break;
-		case 2:
-			break;
+	case 0:
+		break;
+	case 1:
+		break;
+	case 2:
+		break;
 		// [TO-DO] don't allow custom time step for all demos except 4
-		case 3:
-			// allow user to choose integration method
-			TwAddVarRW(DUC->g_pTweakBar, "Integrator Method",
-					   TwDefineEnumFromString("Integrator Method", "Euler,Leap-Frog,Midpoint"),
-					   &m_iIntegrator, "");
-			break;
-		default:break;
+	case 3:
+		// allow user to choose integration method
+		TwAddVarRW(DUC->g_pTweakBar, "Integrator Method",
+			TwDefineEnumFromString("Integrator Method", "Euler,Leap-Frog,Midpoint"),
+			&m_iIntegrator, "");
+		break;
+	default:break;
 	}
 }
 
@@ -47,15 +47,14 @@ void MassSpringSystemSimulator::drawFrame(ID3D11DeviceContext* pd3dImmediateCont
 {
 	for (MassPoint* massPoint : m_vMassPoints)
 	{
-		DUC->setUpLighting(Vec3(), 0.4 * Vec3(1, 1, 1), 100, Vec3(0, 1,0));
-		DUC->drawSphere(massPoint->m_position), Vec3(STD_SPHERE_SIZE, STD_SPHERE_SIZE, STD_SPHERE_SIZE));
+		DUC->setUpLighting(Vec3(), 0.4 * Vec3(1, 1, 1), 100, Vec3(0, 1, 0));
+		DUC->drawSphere(massPoint->m_position, Vec3(0.05, 0.05, 0.05));
 	}
 	for (Spring* spring : m_vSprings)
 	{
-		Spring* spring = m_vSprings.at(i);
 		DUC->beginLine();
 		DUC->drawLine(spring->m_point1->m_position, Vec3(0.5f, 0.5f, 0.5f),
-					  spring->m_point2->m_position, Vec3(0.5f, 0.5f, 0.5f));
+			spring->m_point2->m_position, Vec3(0.5f, 0.5f, 0.5f));
 		DUC->endLine();
 	}
 }
@@ -121,13 +120,24 @@ void MassSpringSystemSimulator::simulateTimestep(float timeStep)
 {
 	switch (m_iIntegrator)
 	{
-		case EULER:
-			break;
-		case LEAPFROG:
-			break;
-		case MIDPOINT:
-			break;
-		default:break;
+	case EULER:
+		for (Spring* spring : m_vSprings)
+		{
+			applyInternalForce(spring);
+		}
+		for (MassPoint* massPoint : m_vMassPoints)
+		{
+			massPoint->m_position = calculateNewPosition(massPoint->m_position, massPoint->m_velocity, timeStep);
+			massPoint->m_velocity = calculateNewVelocity(massPoint->m_velocity, massPoint->m_internalForce, timeStep);
+			// reset internal force, should be calculated again on next system update
+			massPoint->m_internalForce = Vec3();
+		}
+		break;
+	case LEAPFROG:
+		break;
+	case MIDPOINT:
+		break;
+	default:break;
 	}
 }
 
@@ -201,4 +211,33 @@ Vec3 MassSpringSystemSimulator::getVelocityOfMassPoint(int index)
 void MassSpringSystemSimulator::applyExternalForce(Vec3 force)
 {
 	// [TO-DO]
+}
+
+//--------------------------------------------------------------------------------------
+// Calculate and apply internal force of spring to its endpoints
+//--------------------------------------------------------------------------------------
+void MassSpringSystemSimulator::applyInternalForce(Spring* spring)
+{
+	float springTerm = -m_fStiffness
+		* (spring->getCurrentLength() - spring->m_fInitialLength)
+		/ spring->getCurrentLength();
+	spring->m_point1->m_internalForce += springTerm * (spring->m_point1->m_position - spring->m_point2->m_position);
+	spring->m_point2->m_internalForce += springTerm * (spring->m_point2->m_position - spring->m_point1->m_position);
+}
+
+//--------------------------------------------------------------------------------------
+// Calculate new position after time step using velocity as derivative
+//--------------------------------------------------------------------------------------
+Vec3 MassSpringSystemSimulator::calculateNewPosition(Vec3 position, Vec3 velocity, float timeStep)
+{
+	return position + timeStep * velocity;
+}
+
+//--------------------------------------------------------------------------------------
+// Calculate new velocity after time step using accerelation as derivative
+//--------------------------------------------------------------------------------------
+Vec3 MassSpringSystemSimulator::calculateNewVelocity(Vec3 velocity, Vec3 internalForce, float timeStep)
+{
+	Vec3 acceleration = (internalForce - m_fDamping * velocity) / m_fMass;
+	return velocity + timeStep * acceleration;
 }
