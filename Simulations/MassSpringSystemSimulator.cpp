@@ -171,6 +171,17 @@ void MassSpringSystemSimulator::onClick(int x, int y)
 {
 	m_trackmouse.x = x;
 	m_trackmouse.y = y;
+	Mat4 worldViewInv = Mat4(DUC->g_camera.GetWorldMatrix() * DUC->g_camera.GetViewMatrix());
+	worldViewInv = worldViewInv.inverse();
+	Vec3 inputView = Vec3((float)x, (float)-y, 0);
+	Vec3 inputWorld = worldViewInv.transformVectorNormal(inputView);
+
+	for (auto &point : this->m_massPoints) {		
+		if (0.001f * abs(norm(inputWorld - point->m_position)) <= STD_SPHERE_SIZE) {
+			cout << "Found click";
+			point->m_bIsFixed = true;
+		}
+	}
 }
 
 void MassSpringSystemSimulator::onMouse(int x, int y)
@@ -239,7 +250,7 @@ Vec3 MassSpringSystemSimulator::getVelocityOfMassPoint(int index)
 // Simulation Functions
 void MassSpringSystemSimulator::applyExternalForce(Vec3 force)
 {
-	// [TO-DO]
+	// TODO
 }
 
 void MassSpringSystemSimulator::applyInternalForce(Spring* spring)
@@ -247,10 +258,10 @@ void MassSpringSystemSimulator::applyInternalForce(Spring* spring)
 	float springTerm = -m_fStiffness
 					   * (spring->getCurrentLength() - spring->m_fInitialLength)
 					   / spring->getCurrentLength();
-	cout << spring->getCurrentLength() << "\n";
+	//cout << spring->getCurrentLength() << "\n";
 	spring->m_point1->m_internalForce += springTerm * (spring->m_point1->m_position - spring->m_point2->m_position);
 	spring->m_point2->m_internalForce += springTerm * (spring->m_point2->m_position - spring->m_point1->m_position);
-	cout << springTerm << "\n";
+	//cout << springTerm << "\n";
 }
 
 Vec3 MassSpringSystemSimulator::applyInternalForce(Vec3 position, Vec3 velocity, vector<int> attachedSprings)
@@ -299,8 +310,8 @@ void MassSpringSystemSimulator::printFrame()
 	for (int i = 0; i < getNumberOfMassPoints(); i++)
 	{
 		MassPoint* masspoint = m_massPoints.at(i);
-		cout << "pos: " <<  masspoint->m_position
-			 << " vel: " << masspoint->m_velocity
-			 << " for: " << masspoint->m_internalForce << "\n";
+		//cout << "pos: " <<  masspoint->m_position
+		//	 << " vel: " << masspoint->m_velocity
+		//	 << " for: " << masspoint->m_internalForce << "\n";
 	}
 }
