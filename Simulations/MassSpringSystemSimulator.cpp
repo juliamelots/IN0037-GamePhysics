@@ -39,10 +39,8 @@ void MassSpringSystemSimulator::drawFrame(ID3D11DeviceContext* pd3dImmediateCont
 	case 2:
 	case 3:
 	case 4:
-		std::mt19937 eng;
-		std::uniform_real_distribution<float> randCol(0.0f, 1.0f);
 		for (Point point : m_points) {
-			DUC->setUpLighting(Vec3(), 0.4 * Vec3(1, 1, 1), 100, 0.6 * Vec3(randCol(eng), randCol(eng), randCol(eng)));
+			DUC->setUpLighting(Vec3(), 0.4 * Vec3(1, 1, 1), 100, point.getColor());
 			DUC->drawSphere(point.getPosition(), m_fSphereSize);
 		}
 		DUC->beginLine();
@@ -60,12 +58,12 @@ void MassSpringSystemSimulator::drawFrame(ID3D11DeviceContext* pd3dImmediateCont
 void MassSpringSystemSimulator::notifyCaseChanged(int testCase)
 {
 	m_iTestCase = testCase;
-	cout << "called notify"  << testCase << std::endl;
 	cleanSpace();
 	m_printedDemo = false;
 	switch (m_iTestCase) {
 	case 0:
-		cout << "Demo 1!!";
+		calculateDemo1();
+		cout << "Demo 1!!" << endl;
 		setMass(10);
 		setStiffness(40);
 		addMassPoint(Vec3(0, 0, 0), Vec3(-1, 0, 0), false);
@@ -73,7 +71,7 @@ void MassSpringSystemSimulator::notifyCaseChanged(int testCase)
 		addSpring(0, 1, 1);
 		break;
 	case 1:
-		cout << "Demo 2!!";
+		cout << "Demo 2!!" << endl;
 		setMass(10);
 		setStiffness(40);
 		addMassPoint(Vec3(0, 0, 0), Vec3(-1, 0, 0), false);
@@ -82,7 +80,7 @@ void MassSpringSystemSimulator::notifyCaseChanged(int testCase)
 		setIntegrator(EULER);
 		break;
 	case 2:
-		cout << "Demo 3!!";
+		cout << "Demo 3!!" << endl;
 		setMass(10);
 		setStiffness(40);
 		addMassPoint(Vec3(0, 0, 0), Vec3(-1, 0, 0), false);
@@ -90,6 +88,30 @@ void MassSpringSystemSimulator::notifyCaseChanged(int testCase)
 		addSpring(0, 1, 1);
 		setIntegrator(MIDPOINT);
 		break;
+	case 3:
+		cout << "Demo 4!!";
+		setMass(10);
+		setStiffness(40);
+		std::mt19937 eng(time(nullptr));
+		int ballNumber = 10;
+		int springNumber = 10;
+		std::uniform_real_distribution<float> randCol(0.0f, 1.0f);
+		std::uniform_real_distribution<float> randPos(-0.5f, 0.5f);
+		std::uniform_int_distribution<> randPoint(0, ballNumber - 1);
+		std::uniform_real_distribution<float> randLength(-0.5f, 0.5f);
+
+		for (int i = 0; i < ballNumber; i++) {
+			addMassPoint(Vec3(randPos(eng), randPos(eng), randPos(eng)), Vec3(randPos(eng), randPos(eng), randPos(eng)),false);
+		}
+
+		for (int i = 0; i < springNumber; i++) {
+			int point1Index = randPoint(eng);
+			int point2Index = randPoint(eng);
+
+			float distance = norm(m_points[point1Index].getPosition() - m_points[point2Index].getPosition()) + randLength(eng);
+			addSpring(point1Index, point2Index, distance);
+		}
+		setIntegrator(EULER);
 	}
 
 }
@@ -118,7 +140,9 @@ void MassSpringSystemSimulator::setDampingFactor(float damping) {
 }
 
 int MassSpringSystemSimulator::addMassPoint(Vec3 position, Vec3 Velocity, bool isFixed) {
-	Point newPoint = Point(position, Velocity, isFixed);
+	std::mt19937 eng(time(nullptr));
+	std::uniform_real_distribution<float> randCol(0.0f, 1.0f);
+	Point newPoint = Point(position, Velocity, isFixed, Vec3(randCol(eng), randCol(eng), randCol(eng)));
 	m_points.push_back(newPoint);
 	return m_points.size();
 }
@@ -152,6 +176,7 @@ void MassSpringSystemSimulator::simulateTimestep(float timeStep) {
 	//Calculate current force on all Points
 	setForces();
 	//Move every point
+
 	if (m_iIntegrator == EULER) {
 		for (Point& point : m_points) {
 			point.movePoint(timeStep, false);
@@ -159,6 +184,7 @@ void MassSpringSystemSimulator::simulateTimestep(float timeStep) {
 		}
 		checkCollision();
 	}
+
 	else if (m_iIntegrator == MIDPOINT) {
 		float halfTimeStep = timeStep / 2;
 		for (Point& point : m_points) {
@@ -168,10 +194,9 @@ void MassSpringSystemSimulator::simulateTimestep(float timeStep) {
 		setForces();
 		for (Point& point : m_points) {
 			point.movePoint(timeStep, false);
-			cout << "force: " << point.getForceVelocity() << " " << point.getForcePosition() << endl;
 			point.setSpeed(m_externalForce, m_fMass, timeStep, false);
-			cout << "force2: " << point.getForceVelocity() << " " << point.getForcePosition() << endl;
 		}
+		checkCollision();
 	}
 
 	else if (m_iIntegrator == LEAPFROG) {
@@ -200,12 +225,34 @@ void MassSpringSystemSimulator::checkCollision() {
 				point.correctPosition(otherPoint.getPosition() + (2 * m_fRadius) * diff);
 			}
 		}
-		if (point.getPosition().z < m_fRadius) {
+		/*if (point.getPosition().z < m_fRadius) {
 			Vec3 position = point.getPosition();
 			position.z = m_fRadius;
 			point.correctPosition(position);
-		}
+		} */
 	}
+}
+
+void MassSpringSystemSimulator::calculateDemo1() {
+	setMass(10);
+	setStiffness(40);
+	cleanSpace();
+	addMassPoint(Vec3(0, 0, 0), Vec3(-1, 0, 0), false);
+	addMassPoint(Vec3(0, 2, 0), Vec3(1, 0, 0), false);
+	addSpring(0, 1, 1);
+	m_printedDemo = false;
+	setIntegrator(EULER);
+	cout << "DEMO 1 \n EULER Values: " << endl;
+	simulateTimestep(0.1);
+	cleanSpace();
+	addMassPoint(Vec3(0, 0, 0), Vec3(-1, 0, 0), false);
+	addMassPoint(Vec3(0, 2, 0), Vec3(1, 0, 0), false);
+	addSpring(0, 1, 1);
+	m_printedDemo = false;
+	setIntegrator(MIDPOINT);
+	cout << "DEMO 1 \n MIDPOINT Values: " << endl;
+	simulateTimestep(0.1);
+	cleanSpace();
 }
 
 void MassSpringSystemSimulator::onClick(int x, int y)
@@ -219,6 +266,9 @@ void MassSpringSystemSimulator::onMouse(int x, int y)
 void MassSpringSystemSimulator::setForces() {
 	for (Point& point : m_points) {
 		point.setDamping(m_fDamping);
+		if (m_iTestCase == 3) {
+			point.setExternalForce(Vec3(0, -10, 0));
+		}
 	}
 	for (Spring spring : m_springs) {
 		Point& firstPoint = m_points[spring.point1];

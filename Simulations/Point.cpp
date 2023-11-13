@@ -1,13 +1,13 @@
 #include "Point.h"
 #include <iostream>
 
-Point::Point(Vec3 position, Vec3 velocity, bool isFixed) {
-	std::cout << "point" << std::endl;
+Point::Point(Vec3 position, Vec3 velocity, bool isFixed, Vec3 color) {
 	this->velocity = velocity;
 	this->forceVelocity = velocity;
 	this->position = position;
 	this->forcePosition = position;
 	this->isFixed = isFixed;
+	this->color = color;
 }
 
 void Point::setDamping(float dampingFactor) {
@@ -23,7 +23,6 @@ void Point::movePoint(float timeStep, bool forcePositionOnly) {
 	if (isFixed) return;
 	if (forcePositionOnly) {
 		forcePosition += velocity * timeStep;
-		std::cout << forcePosition << std::endl;
 	}
 	else {
 		position += velocity * timeStep;
@@ -35,13 +34,16 @@ void Point::movePoint(float timeStep, bool forcePositionOnly) {
 void Point::setSpeed(Vec3 externalForce, float mass, float timeStep, bool forceVelocityOnly) {
 	if (isFixed) return;
 	if (forceVelocityOnly) {
-		std::cout << "beforeSet" << forceVelocity << std::endl;
 		forceVelocity += ((force + externalForce) / mass) * timeStep;
-		std::cout << "velocity " << forceVelocity << std::endl;
 	}
 	else {
 		velocity += ((force + externalForce) / mass) * timeStep;
 		forceVelocity = velocity;
 	}
 	//std::cout << "velocity: " << velocity << std::endl;
+}
+
+void Point::setExternalForce(Vec3 force) {
+	if (isFixed) return;
+	force += force;
 }

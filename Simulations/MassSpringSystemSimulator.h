@@ -3,6 +3,8 @@
 #include "Simulator.h"
 #include "Point.h"
 #include "Spring.h"
+#include <ctime> 
+
 
 // Do Not Change
 #define EULER 0
@@ -48,6 +50,7 @@ private:
 	void setForces();
 	void checkCollision();
 	void cleanSpace();
+	void calculateDemo1();
 
 private:
 	// Data Attributes
