@@ -2,13 +2,16 @@
 #include <iostream>
 
 Point::Point(Vec3 position, Vec3 velocity, bool isFixed) {
+	std::cout << "point" << std::endl;
 	this->velocity = velocity;
+	this->forceVelocity = velocity;
 	this->position = position;
+	this->forcePosition = position;
 	this->isFixed = isFixed;
 }
 
 void Point::setDamping(float dampingFactor) {
-	force = -velocity * dampingFactor;
+	force = -forceVelocity * dampingFactor;
 }
 
 void Point::addSpringForce(Vec3 force) {
@@ -16,15 +19,29 @@ void Point::addSpringForce(Vec3 force) {
 	//std::cout << "force: " << this->force << std::endl;
 }
 
-void Point::movePoint(float timeStep) {
+void Point::movePoint(float timeStep, bool forcePositionOnly) {
 	if (isFixed) return;
-	position += velocity * timeStep;
+	if (forcePositionOnly) {
+		forcePosition += velocity * timeStep;
+		std::cout << forcePosition << std::endl;
+	}
+	else {
+		position += velocity * timeStep;
+		forcePosition = position;
+	}
 	//std::cout << "position: " << position << std::endl;
 }
 
-void Point::setSpeed(Vec3 externalForce, float mass, float timeStep) {
+void Point::setSpeed(Vec3 externalForce, float mass, float timeStep, bool forceVelocityOnly) {
 	if (isFixed) return;
-	velocity += ((force + externalForce) / mass) * timeStep;
+	if (forceVelocityOnly) {
+		std::cout << "beforeSet" << forceVelocity << std::endl;
+		forceVelocity += ((force + externalForce) / mass) * timeStep;
+		std::cout << "velocity " << forceVelocity << std::endl;
+	}
+	else {
+		velocity += ((force + externalForce) / mass) * timeStep;
+		forceVelocity = velocity;
+	}
 	//std::cout << "velocity: " << velocity << std::endl;
-
 }

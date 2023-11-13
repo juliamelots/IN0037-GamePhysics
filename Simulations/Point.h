@@ -19,22 +19,33 @@ public:
 		return velocity;
 	}
 
+	Vec3 getForcePosition() {
+		return forcePosition;
+	}
+
+	Vec3 getForceVelocity() {
+		return forceVelocity;
+	}
+
 	void correctPosition(Vec3 position) {
 		this->position = position;
+		forcePosition = position;
 	}
 
 	void setDamping(float dampingFactor);
 
 	void addSpringForce(Vec3 force);
 
-	void movePoint(float timeStep);
+	void movePoint(float timeStep, bool forcePositionOnly);
 
-	void setSpeed(Vec3 externalForce, float mass, float timeStep);
+	void setSpeed(Vec3 externalForce, float mass, float timeStep, bool forceVelocityOnly);
 
 private: 
 	float mass{};
 	float dampingFactor{};
 	Vec3 position;
+	Vec3 forcePosition;
+	Vec3 forceVelocity;
 	Vec3 velocity;
 	Vec3 force;
 	bool isFixed;
