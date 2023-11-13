@@ -9,6 +9,24 @@
 // Do Not Change
 
 
+class Spring {
+public:
+	int point1;
+	int point2;
+	float stiffness;
+	float initialLength;
+};
+
+class Point {
+public:
+	Vec3 position;
+	Vec3 velocity;
+	Vec3 force;
+	float mass;
+	float damping;
+	bool isFixed;
+};
+
 class MassSpringSystemSimulator:public Simulator{
 public:
 	// Construtors
@@ -48,6 +66,9 @@ private:
 	float m_fStiffness;
 	float m_fDamping;
 	int m_iIntegrator;
+	vector<Point> points;
+	vector<Spring> springs;
+	Vec3 accExternalForce;
 
 	// UI Attributes
 	Vec3 m_externalForce;
@@ -55,4 +76,5 @@ private:
 	Point2D m_trackmouse;
 	Point2D m_oldtrackmouse;
 };
+
 #endif
