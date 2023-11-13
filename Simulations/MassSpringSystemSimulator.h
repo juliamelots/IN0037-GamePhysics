@@ -1,13 +1,20 @@
 #ifndef MASSSPRINGSYSTEMSIMULATOR_h
 #define MASSSPRINGSYSTEMSIMULATOR_h
 #include "Simulator.h"
+#include "MassSpringComponents.h"
 
 // Do Not Change
 #define EULER 0
 #define LEAPFROG 1
 #define MIDPOINT 2
+
+#define TRUE 1
+#define FALSE 0
+
 // Do Not Change
 
+#define STD_FIXED 0
+#define STD_SPHERE_SIZE 0.05
 
 class MassSpringSystemSimulator:public Simulator{
 public:
@@ -35,7 +42,17 @@ public:
 	int getNumberOfSprings();
 	Vec3 getPositionOfMassPoint(int index);
 	Vec3 getVelocityOfMassPoint(int index);
+
+	// Simulation Functions
 	void applyExternalForce(Vec3 force);
+	void applyInternalForce(Spring* spring);
+	void applyGravity();
+	Vec3 applyInternalForce(Vec3 position, Vec3 velocity, vector<int> attachedSprings);
+	Vec3 integratePosition(Vec3 position, Vec3 velocity, float timeStep);
+	Vec3 integrateVelocity(Vec3 velocity, Vec3 internalForce, float timeStep);
+
+	// Set Up Functions
+	void setUp2PointSystem();
 	
 	// Do Not Change
 	void setIntegrator(int integrator) {
@@ -48,6 +65,11 @@ private:
 	float m_fStiffness;
 	float m_fDamping;
 	int m_iIntegrator;
+	int m_iGravity;
+
+	// Control Attributes
+	vector<MassPoint*> m_massPoints;
+	vector<Spring*> m_springs;
 
 	// UI Attributes
 	Vec3 m_externalForce;
