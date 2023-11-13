@@ -289,9 +289,9 @@ void MassSpringSystemSimulator::setUp2PointSystem()
 	m_springs.clear();
 	setMass(10.0);
 	setStiffness(40);
-	addMassPoint(Vec3(0, 0, 0), Vec3(-0.1, 0, 0), STD_FIXED);
-	addMassPoint(Vec3(0, 0.2, 0), Vec3(0.1, 0, 0), STD_FIXED);
-	addSpring(0, 1, 0.1);
+	addMassPoint(Vec3(0, 0, 0), Vec3(-1, 0, 0), STD_FIXED);
+	addMassPoint(Vec3(0, 2, 0), Vec3(1, 0, 0), STD_FIXED);
+	addSpring(0, 1, 1);
 }
 
 void MassSpringSystemSimulator::printFrame()
