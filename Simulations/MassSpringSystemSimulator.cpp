@@ -6,7 +6,8 @@ MassSpringSystemSimulator::MassSpringSystemSimulator() {
 	addMassPoint(Vec3(0,0,0), Vec3(-1,0,0), false);
 	addMassPoint(Vec3(0, 2, 0), Vec3(1, 0, 0), false);
 	addSpring(0,1,1);
-	m_fSphereSize = 0.05f * Vec3(1,1,1);
+	m_fRadius = 0.05f;
+	m_fSphereSize = m_fRadius * Vec3(1,1,1);
 	m_fDamping = 0.0f;
 	setIntegrator(EULER);
 }
@@ -19,6 +20,12 @@ const char* MassSpringSystemSimulator::getTestCasesStr()
 void MassSpringSystemSimulator::initUI(DrawingUtilitiesClass* DUC)
 {
 	this->DUC = DUC;
+	/*switch (m_DemoNumber) {
+	case 0: 
+		break;
+	case 1:
+
+	}*/
 }
 
 void MassSpringSystemSimulator::reset()
@@ -26,6 +33,7 @@ void MassSpringSystemSimulator::reset()
 	m_mouse.x = m_mouse.y = 0;
 	m_trackmouse.x = m_trackmouse.y = 0;
 	m_oldtrackmouse.x = m_oldtrackmouse.y = 0;
+	//TODO: reset 
 }
 
 void MassSpringSystemSimulator::drawFrame(ID3D11DeviceContext* pd3dImmediateContext)
@@ -38,7 +46,7 @@ void MassSpringSystemSimulator::drawFrame(ID3D11DeviceContext* pd3dImmediateCont
 	}
 	DUC->beginLine();
 	for (Spring spring : springs) {
-	std:cout << points[spring.point1].getPosition() << " " << points[spring.point2].getPosition() << std :: endl;
+	//std:cout << points[spring.point1].getPosition() << " " << points[spring.point2].getPosition() << std :: endl;
 		DUC->drawLine(points[spring.point1].getPosition(), Vec3(0.5f,0.5f,0.5f), points[spring.point2].getPosition(), Vec3(0.5f,0.5f,0.5f));
 	}
 	DUC->endLine();
@@ -46,6 +54,7 @@ void MassSpringSystemSimulator::drawFrame(ID3D11DeviceContext* pd3dImmediateCont
 
 void MassSpringSystemSimulator::notifyCaseChanged(int testCase)
 {
+	m_DemoNumber = testCase;
 }
 
 void MassSpringSystemSimulator::externalForcesCalculations(float timeElapsed)
@@ -104,6 +113,7 @@ void MassSpringSystemSimulator::simulateTimestep(float timeStep) {
 			point.movePoint(timeStep);
 			point.setSpeed(m_externalForce, m_fMass, timeStep);
 		}
+		checkCollision();
 	}
 	else if (m_iIntegrator == MIDPOINT) {
 		float halfTimeStep = timeStep / 2;
@@ -111,6 +121,7 @@ void MassSpringSystemSimulator::simulateTimestep(float timeStep) {
 			point.movePoint(halfTimeStep);
 			point.setSpeed(m_externalForce, m_fMass, halfTimeStep);
 		}
+		checkCollision();
 		setForces();
 		for (Point point : points) {
 			point.movePoint(halfTimeStep);
@@ -121,6 +132,26 @@ void MassSpringSystemSimulator::simulateTimestep(float timeStep) {
 		for (Point point : points) {
 			point.setSpeed(m_externalForce, m_fMass, timeStep);
 			point.movePoint(timeStep);
+		}
+		checkCollision();
+	}
+}
+
+void MassSpringSystemSimulator::checkCollision() {
+	float minDistanceSquared = (2 * m_fRadius) * (2 * m_fRadius);
+	for (Point& point : points) {
+		for (Point& otherPoint : points) {
+			if (&point == &otherPoint) continue;
+			if (point.getPosition().squaredDistanceTo(otherPoint.getPosition()) < minDistanceSquared) {
+				Vec3 diff = point.getPosition() - otherPoint.getPosition();
+				norm(diff);
+				point.correctPosition(otherPoint.getPosition() + (2 * m_fRadius) * diff);
+			}
+		}
+		if (point.getPosition().z < m_fRadius) {
+			Vec3 position = point.getPosition();
+			position.z = m_fRadius;
+			point.correctPosition(position);
 		}
 	}
 }

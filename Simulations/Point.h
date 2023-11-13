@@ -19,6 +19,10 @@ public:
 		return velocity;
 	}
 
+	void correctPosition(Vec3 position) {
+		this->position = position;
+	}
+
 	void setDamping(float dampingFactor);
 
 	void addSpringForce(Vec3 force);

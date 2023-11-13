@@ -13,18 +13,18 @@ void Point::setDamping(float dampingFactor) {
 
 void Point::addSpringForce(Vec3 force) {
 	this->force += force;
-	std::cout << "force: " << this->force << std::endl;
+	//std::cout << "force: " << this->force << std::endl;
 }
 
 void Point::movePoint(float timeStep) {
 	if (isFixed) return;
 	position += velocity * timeStep;
-	std::cout << "position: " << position << std::endl;
+	//std::cout << "position: " << position << std::endl;
 }
 
 void Point::setSpeed(Vec3 externalForce, float mass, float timeStep) {
 	if (isFixed) return;
 	velocity += ((force + externalForce) / mass) * timeStep;
-	std::cout << "velocity: " << velocity << std::endl;
+	//std::cout << "velocity: " << velocity << std::endl;
 
 }

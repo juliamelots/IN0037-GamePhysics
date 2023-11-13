@@ -46,6 +46,7 @@ public:
 
 private:
 	void setForces();
+	void checkCollision();
 
 private:
 	// Data Attributes
@@ -53,9 +54,11 @@ private:
 	float m_fStiffness;
 	float m_fDamping;
 	Vec3 m_fSphereSize;
+	float m_fRadius;
 	int m_iIntegrator;
 	std::vector<Point> points;
 	std::vector<Spring> springs;
+	int m_DemoNumber;
 
 	// UI Attributes
 	Vec3 m_externalForce;
