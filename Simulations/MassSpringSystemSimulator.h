@@ -77,6 +77,7 @@ public:
 	Vec3 getPositionOfMassPoint(int index);
 	Vec3 getVelocityOfMassPoint(int index);
 	void applyExternalForce(Vec3 force);
+	void checkCollision();
 
 	// Additional Functions
 	void applyInternalForce(Spring* spring);
@@ -95,6 +96,7 @@ private:
 	float m_fStiffness;
 	float m_fDamping;
 	int m_iIntegrator;
+	const float m_fRadius = 0.05f;
 	vector<MassPoint*> m_vMassPoints;
 	vector<Spring*> m_vSprings;
 

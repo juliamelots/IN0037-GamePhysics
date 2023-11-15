@@ -48,7 +48,7 @@ void MassSpringSystemSimulator::drawFrame(ID3D11DeviceContext* pd3dImmediateCont
 	for (MassPoint* massPoint : m_vMassPoints)
 	{
 		DUC->setUpLighting(Vec3(), 0.4 * Vec3(1, 1, 1), 100, Vec3(0, 1, 0));
-		DUC->drawSphere(massPoint->m_position, Vec3(0.05, 0.05, 0.05));
+		DUC->drawSphere(massPoint->m_position, m_fRadius * Vec3(1, 1, 1));
 	}
 	for (Spring* spring : m_vSprings)
 	{
@@ -240,4 +240,26 @@ Vec3 MassSpringSystemSimulator::calculateNewVelocity(Vec3 velocity, Vec3 interna
 {
 	Vec3 acceleration = (internalForce - m_fDamping * velocity) / m_fMass;
 	return velocity + timeStep * acceleration;
+}
+
+//--------------------------------------------------------------------------------------
+// Check collision of mass points and (maybe) the floor
+//--------------------------------------------------------------------------------------
+void MassSpringSystemSimulator::checkCollision() {
+	float minDistanceSquared = (2 * m_fRadius) * (2 * m_fRadius);
+	for (auto point : m_vMassPoints) {
+		for (auto otherPoint : m_vMassPoints) {
+			if (point == otherPoint) continue;
+			if (point->m_position.squaredDistanceTo(otherPoint->m_position) < minDistanceSquared) {
+				Vec3 diff = point->m_position - otherPoint->m_position;
+				normalize(diff);
+				point->m_position = otherPoint->m_position + (2 * m_fRadius) * diff;
+			}
+		}
+		/*if (point.getPosition().z < m_fRadius) {
+			Vec3 position = point.getPosition();
+			position.z = m_fRadius;
+			point.correctPosition(position);
+		} */
+	}
 }
