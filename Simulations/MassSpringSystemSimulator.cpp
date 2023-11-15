@@ -317,7 +317,6 @@ void MassSpringSystemSimulator::removeSprings() {
 	m_vSprings.clear();
 	m_vSprings.shrink_to_fit();
 }
-}
 
 //--------------------------------------------------------------------------------------
 // Check collision of mass points and (maybe) the floor
