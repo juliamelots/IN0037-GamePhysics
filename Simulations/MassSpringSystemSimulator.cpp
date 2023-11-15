@@ -59,6 +59,7 @@ void MassSpringSystemSimulator::drawFrame(ID3D11DeviceContext* pd3dImmediateCont
 	DUC->endLine();
 }
 
+
 void MassSpringSystemSimulator::notifyCaseChanged(int testCase)
 {
 	m_iTestCase = testCase;
@@ -82,7 +83,7 @@ void MassSpringSystemSimulator::notifyCaseChanged(int testCase)
 		cout << "Euler\n";
 		cout << "positions: " << m_vMassPoints[0]->m_position << " " << m_vMassPoints[1]->m_position << "\n";
 		cout << "velocities: " << m_vMassPoints[0]->m_velocity << " " << m_vMassPoints[1]->m_velocity << "\n";
-		
+
 
 		// reset
 		removeMassPoints();
@@ -126,9 +127,44 @@ void MassSpringSystemSimulator::notifyCaseChanged(int testCase)
 		// [TO-DO] h = 0.005
 		break;
 	case 3:
+	{
 		cout << "Demo 4: complex simulation\n";
+		setMass(10);
+		setStiffness(40);
+		std::mt19937 eng(time(nullptr));
+		int ballNumber = 10;
+		int springNumber = 10;
+		std::uniform_real_distribution<float> randPos(-0.5f, 0.5f);
+		std::uniform_int_distribution<> randPoint(0, ballNumber - 2);
+		std::uniform_real_distribution<float> randLength(-0.5f, 0.5f);
+		removeMassPoints();
+		removeSprings();
+		cout << "masses: ";
+		for (int i = 0; i < ballNumber; i++) {
+			Vec3 pos = Vec3(randPos(eng), randPos(eng), randPos(eng));
+			Vec3 speed = Vec3(randPos(eng), randPos(eng), randPos(eng));
+			addMassPoint( pos, speed, false);
+			cout << i << ": " << speed << pos << " . ";
+		}
+		cout << endl;
+
+		for (int i = 0; i < ballNumber; i++) {
+			int point1Index = i;
+			int point2Index = randPoint(eng);
+			if (point2Index >= i) point2Index++;
+			float distance = normalize(m_vMassPoints[point1Index]->m_position - m_vMassPoints[point2Index]->m_position) + randLength(eng);
+			if (distance < 0) {
+				distance = -distance;
+			}
+			if (distance < 0.001f) {
+				distance = 0.001f;
+			}
+			addSpring(point1Index, point2Index, distance);
+		}
+		setIntegrator(EULER);
 		// [TO-DO] set up 10-point mass-spring system
 		break;
+	}
 	case 4:
 		cout << "Demo 5: optional Leap-frog\n";
 		// [TO-DO] set up 2-point mass-spring system
@@ -212,6 +248,7 @@ void MassSpringSystemSimulator::simulateTimestep(float timeStep)
 		break;
 	default:break;
 	}
+	checkCollision();
 }
 
 void MassSpringSystemSimulator::onClick(int x, int y)
