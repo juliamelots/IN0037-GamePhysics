@@ -77,6 +77,8 @@ public:
 	Vec3 getPositionOfMassPoint(int index);
 	Vec3 getVelocityOfMassPoint(int index);
 	void applyExternalForce(Vec3 force);
+	void removeMassPoints();
+	void removeSprings();
 
 	// Additional Functions
 	void applyInternalForce(Spring* spring);
