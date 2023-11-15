@@ -50,13 +50,13 @@ void MassSpringSystemSimulator::drawFrame(ID3D11DeviceContext* pd3dImmediateCont
 		DUC->setUpLighting(Vec3(), 0.4 * Vec3(1, 1, 1), 100, Vec3(0, 1, 0));
 		DUC->drawSphere(massPoint->m_position, m_fRadius * Vec3(1, 1, 1));
 	}
+	DUC->beginLine();
 	for (Spring* spring : m_vSprings)
 	{
-		DUC->beginLine();
 		DUC->drawLine(spring->m_point1->m_position, Vec3(0.5f, 0.5f, 0.5f),
 			spring->m_point2->m_position, Vec3(0.5f, 0.5f, 0.5f));
-		DUC->endLine();
 	}
+	DUC->endLine();
 }
 
 void MassSpringSystemSimulator::notifyCaseChanged(int testCase)
@@ -66,16 +66,52 @@ void MassSpringSystemSimulator::notifyCaseChanged(int testCase)
 	{
 	case 0:
 		cout << "Demo 1: simple one-step test\n";
-		// [TO-DO] set up 2-point mass-spring system
+		// reset
+		removeMassPoints();
+		removeSprings();
+
+		// euler
+		setMass(10.0);
+		setStiffness(40.0);
+		addMassPoint(Vec3(0, 0, 0), Vec3(-1, 0, 0), false);
+		addMassPoint(Vec3(0, 2, 0), Vec3(1, 0, 0), false);
+		addSpring(0, 1, 1.0);
 		setIntegrator(EULER);
 		simulateTimestep(0.1);
-		// [TO-DO] print result after one Euler step
+		// print result after one Euler step
+		cout << "Euler\n";
+		cout << "positions: " << m_vMassPoints[0]->m_position << " " << m_vMassPoints[1]->m_position << "\n";
+		cout << "velocities: " << m_vMassPoints[0]->m_velocity << " " << m_vMassPoints[1]->m_velocity << "\n";
+		
 
-		// [TO-DO] reset up 2-point mass-spring system
+		// reset
+		removeMassPoints();
+		removeSprings();
+
+		// midpoint
+		setMass(10.0);
+		setStiffness(40.0);
+		addMassPoint(Vec3(0, 0, 0), Vec3(-1, 0, 0), false);
+		addMassPoint(Vec3(0, 2, 0), Vec3(1, 0, 0), false);
+		addSpring(0, 1, 1.0);
 		setIntegrator(MIDPOINT);
 		simulateTimestep(0.1);
+		// print result after one midpoint step
+		cout << "Midpoint\n";
+		cout << "positions: " << m_vMassPoints[0]->m_position << " " << m_vMassPoints[1]->m_position << "\n";
+		cout << "velocities: " << m_vMassPoints[0]->m_velocity << " " << m_vMassPoints[1]->m_velocity << "\n";
 
-		// [TO-DO] limit Demo 1 to only these steps
+		// reset
+		removeMassPoints();
+		removeSprings();
+
+		setMass(10.0);
+		setStiffness(40.0);
+		addMassPoint(Vec3(0, 0, 0), Vec3(-1, 0, 0), false);
+		addMassPoint(Vec3(0, 2, 0), Vec3(1, 0, 0), false);
+		addSpring(0, 1, 1.0);
+		setIntegrator(EULER);
+
 		break;
 	case 1:
 		cout << "Demo 2: simple Euler simulation\n";
@@ -134,8 +170,37 @@ void MassSpringSystemSimulator::simulateTimestep(float timeStep)
 		}
 		break;
 	case LEAPFROG:
+		// calculate the leap-frog positions and velocities
+
+
 		break;
 	case MIDPOINT:
+		// calculate the midpoint positions and velocities
+		for (Spring* spring : m_vSprings)
+		{
+			applyInternalForce(spring);
+		}
+		for (MassPoint* massPoint : m_vMassPoints)
+		{
+			massPoint->m_OldPosition = massPoint->m_position;
+			massPoint->m_OldVelocity = massPoint->m_velocity;
+			massPoint->m_position = calculateNewPosition(massPoint->m_position, massPoint->m_velocity, timeStep / 2.0);
+			massPoint->m_velocity = calculateNewVelocity(massPoint->m_velocity, massPoint->m_internalForce, timeStep / 2.0);
+			// reset internal force, should be calculated again on next system update
+			massPoint->m_internalForce = Vec3();
+		}
+
+		for (Spring* spring : m_vSprings)
+		{
+			applyInternalForce(spring);
+		}
+		for (MassPoint* massPoint : m_vMassPoints)
+		{
+			massPoint->m_position = calculateNewPosition(massPoint->m_OldPosition, massPoint->m_velocity, timeStep);
+			massPoint->m_velocity = calculateNewVelocity(massPoint->m_velocity, massPoint->m_internalForce, timeStep);
+			// reset internal force, should be calculated again on next system update
+			massPoint->m_internalForce = Vec3();
+		}
 		break;
 	default:break;
 	}
@@ -217,7 +282,7 @@ void MassSpringSystemSimulator::applyExternalForce(Vec3 force)
 // Calculate and apply internal force of spring to its endpoints
 //--------------------------------------------------------------------------------------
 void MassSpringSystemSimulator::applyInternalForce(Spring* spring)
-{
+{	
 	float springTerm = -m_fStiffness
 		* (spring->getCurrentLength() - spring->m_fInitialLength)
 		/ spring->getCurrentLength();
@@ -240,6 +305,18 @@ Vec3 MassSpringSystemSimulator::calculateNewVelocity(Vec3 velocity, Vec3 interna
 {
 	Vec3 acceleration = (internalForce - m_fDamping * velocity) / m_fMass;
 	return velocity + timeStep * acceleration;
+}
+
+void MassSpringSystemSimulator::removeMassPoints()
+{
+	m_vMassPoints.clear();
+	m_vMassPoints.shrink_to_fit();
+}
+
+void MassSpringSystemSimulator::removeSprings() {
+	m_vSprings.clear();
+	m_vSprings.shrink_to_fit();
+}
 }
 
 //--------------------------------------------------------------------------------------
