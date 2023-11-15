@@ -170,9 +170,17 @@ void MassSpringSystemSimulator::simulateTimestep(float timeStep)
 		}
 		break;
 	case LEAPFROG:
-		// calculate the leap-frog positions and velocities
-
-
+		for (Spring* spring : m_vSprings)
+		{
+			applyInternalForce(spring);
+		}
+		for (MassPoint* massPoint : m_vMassPoints)
+		{
+			massPoint->m_velocity = calculateNewVelocity(massPoint->m_velocity, massPoint->m_internalForce, timeStep);
+			massPoint->m_position = calculateNewPosition(massPoint->m_position, massPoint->m_velocity, timeStep);
+			// reset internal force, should be calculated again on next system update
+			massPoint->m_internalForce = Vec3();
+		}
 		break;
 	case MIDPOINT:
 		// calculate the midpoint positions and velocities
