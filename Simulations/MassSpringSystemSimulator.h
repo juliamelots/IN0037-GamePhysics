@@ -79,6 +79,11 @@ public:
 	void applyExternalForce(Vec3 force);
 	void removeMassPoints();
 	void removeSprings();
+	void addRandomMassPoints(int number);
+	void addRandomSprings(int number);
+	bool isClickedPoint(Vec3 pointPos);
+
+	// Additional Functions
 	void checkCollision();
 	void applyInternalForce(Spring* spring);
 	Vec3 calculateNewPosition(Vec3 position, Vec3 velocity, float timeStep);

@@ -83,7 +83,6 @@ void MassSpringSystemSimulator::notifyCaseChanged(int testCase)
 		cout << "positions: " << m_vMassPoints[0]->m_position << " " << m_vMassPoints[1]->m_position << "\n";
 		cout << "velocities: " << m_vMassPoints[0]->m_velocity << " " << m_vMassPoints[1]->m_velocity << "\n";
 
-
 		// reset
 		removeMassPoints();
 		removeSprings();
@@ -202,8 +201,35 @@ void MassSpringSystemSimulator::notifyCaseChanged(int testCase)
 // Calculate gravity and user interaction forces
 //--------------------------------------------------------------------------------------
 void MassSpringSystemSimulator::externalForcesCalculations(float timeElapsed)
-{
-	// [TO-DO]
+{	
+	Point2D mouseDiff;
+	mouseDiff.x = m_trackmouse.x - m_oldtrackmouse.x;
+	mouseDiff.y = m_trackmouse.y - m_oldtrackmouse.y;
+	//cout << "world matrix: " << Mat4(DUC->g_camera.GetWorldMatrix()) << "\n";
+	//cout << "view matrix: " << Mat4(DUC->g_camera.GetViewMatrix()) << "\n";
+	Mat4 worldViewInv = Mat4(DUC->g_camera.GetWorldMatrix() * DUC->g_camera.GetViewMatrix());
+	worldViewInv = worldViewInv.inverse();
+	Vec3 inputView = Vec3((float)mouseDiff.x, (float)-mouseDiff.y, 0);
+	Vec3 inputWorld = worldViewInv.transformVectorNormal(inputView);
+	// find a proper scale!
+	float inputScale = 0.001f;
+	inputWorld = inputWorld * inputScale;
+	
+	if (mouseDiff.x != 0 || mouseDiff.y != 0) 
+	{
+		for (MassPoint* massPoint : m_vMassPoints)
+		{
+			// project the mass point to the camera plane.
+			Vec3 pointPos = massPoint->m_position;
+			// check if the distance between the projected point and the old mouse position is below the preset threshold.
+			// if true, move the point(s) with mouse.
+			if (isClickedPoint(pointPos))
+			{
+				massPoint->m_oldPosition = massPoint->m_position;
+				massPoint->m_position += inputWorld;
+			}
+		}
+	}
 }
 
 //--------------------------------------------------------------------------------------
@@ -384,10 +410,63 @@ void MassSpringSystemSimulator::removeSprings() {
 	m_vSprings.shrink_to_fit();
 }
 
+void MassSpringSystemSimulator::addRandomMassPoints(int number)
+{	
+	std::mt19937 eng(time(nullptr));
+	std::uniform_real_distribution<float> randCol(0.0f, 1.0f);
+	std::uniform_real_distribution<float> randPos(-1.0f, 1.0f);
+	std::uniform_real_distribution<float> randVel(-1.0f, 1.0f);
+
+	for (int i = 0; i < number; i++) {
+		addMassPoint(Vec3(randPos(eng), randPos(eng), randPos(eng)), Vec3(randVel(eng), randVel(eng), randVel(eng)), false);
+	}
+}
+
+void MassSpringSystemSimulator::addRandomSprings(int number)
+{
+	std::mt19937 eng(time(nullptr));
+	for (int i = 0; i < number; i++) {
+		std::uniform_int_distribution<> randPoint(0, getNumberOfMassPoints() - 1);
+		std::uniform_real_distribution<float> randLength(-0.5f, 0.5f);
+		int point1Index = randPoint(eng);
+		int point2Index = randPoint(eng);
+		float distance = norm(m_vMassPoints.at(point1Index)->m_position - m_vMassPoints.at(point2Index)->m_position) + randLength(eng);
+		addSpring(point1Index, point2Index, distance);
+	}
+}
+
+bool MassSpringSystemSimulator::isClickedPoint(Vec3 pointPos)
+{
+	// Transform from world space to camera space (using view matrix)
+	Vec3 worldSpacePoint = Mat4(DUC->g_camera.GetWorldMatrix()) * pointPos;
+	Vec3 cameraSpacePoint = Mat4(DUC->g_camera.GetViewMatrix()) * worldSpacePoint;
+
+	// Transform from camera space to clip space (using projection matrix)
+	Vec3 ndcPoint = Mat4(DUC->g_camera.GetProjMatrix()) * cameraSpacePoint;
+
+	// Perform perspective division to get normalized device coordinates (NDC)
+	normalize(ndcPoint);
+
+	float inputScale = 0.001f;
+	/*
+	cout << "ndcPoint: " << ndcPoint << "\n";
+	cout << "x diff: " << abs(ndcPoint.x - m_oldtrackmouse.x * inputScale) << "\n";
+	cout << "y diff: " << abs(ndcPoint.y - m_oldtrackmouse.y * inputScale) << "\n";
+	*/
+
+	if (abs(ndcPoint.x - m_oldtrackmouse.x * inputScale) < 0.5 && abs(ndcPoint.y - m_oldtrackmouse.y * inputScale) < 0.5)
+	{
+		return true;
+	}
+
+	return false;
+}
+
 //--------------------------------------------------------------------------------------
 // Check collision of mass points and (maybe) the floor
 //--------------------------------------------------------------------------------------
-void MassSpringSystemSimulator::checkCollision() {
+void MassSpringSystemSimulator::checkCollision()
+{
 	float minDistanceSquared = (2 * m_fRadius) * (2 * m_fRadius);
 	for (auto point : m_vMassPoints) {
 		for (auto otherPoint : m_vMassPoints) {
