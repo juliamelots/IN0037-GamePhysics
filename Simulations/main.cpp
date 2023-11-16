@@ -250,7 +250,18 @@ void CALLBACK OnFrameMove( double dTime, float fElapsedTime, void* pUserContext 
 			g_pDUC->g_pTweakBar = nullptr;
 		}
 		initTweakBar();
-		g_pSimulator->notifyCaseChanged(g_iTestCase, g_fTimestep);
+	#ifdef MASS_SPRING_SYSTEM
+		switch (g_iTestCase)
+		{
+			case 3:
+				TwAddVarRW(g_pDUC->g_pTweakBar, "Timestep", TW_TYPE_FLOAT, &g_fTimestep, "step=0.0001 min=0.0001");
+				break;
+			default:
+				g_fTimestep = 0.005;
+				break;
+		}
+	#endif
+		g_pSimulator->notifyCaseChanged(g_iTestCase);
 		g_pSimulator->initUI(g_pDUC);
 		g_iPreTestCase = g_iTestCase;
 	}

@@ -60,7 +60,7 @@ public:
 	void initUI(DrawingUtilitiesClass * DUC);
 	void reset();
 	void drawFrame(ID3D11DeviceContext* pd3dImmediateContext);
-	void notifyCaseChanged(int testCase, float& timeStep);
+	void notifyCaseChanged(int testCase);
 	void externalForcesCalculations(float timeElapsed);
 	void simulateTimestep(float timeStep);
 	void onClick(int x, int y);
@@ -70,7 +70,6 @@ public:
 	void setMass(float mass);
 	void setStiffness(float stiffness);
 	void setDampingFactor(float damping);
-	void setTimeStep(float& oldTimeStep, float newTimeStep);
 	int addMassPoint(Vec3 position, Vec3 velocity, bool isFixed);
 	void addSpring(int indexPoint1, int indexPoint2, float initialLength);
 	int getNumberOfMassPoints();
