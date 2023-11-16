@@ -14,9 +14,9 @@ public:
 	// Constructors
 	MassPoint(Vec3 position, Vec3 velocity, bool isFixed)
 	{
-		m_position = m_OldPosition = position;
-		m_velocity = m_OldVelocity = velocity;
-		m_internalForce = m_OldInternalForce = Vec3();
+		m_position = m_oldPosition = position;
+		m_velocity = m_oldVelocity = velocity;
+		m_internalForce = m_oldInternalForce = Vec3();
 		m_bIsFixed = isFixed;
 	};
 
@@ -24,9 +24,9 @@ public:
 	Vec3 m_position;
 	Vec3 m_velocity;
 	Vec3 m_internalForce;
-	Vec3 m_OldPosition;
-	Vec3 m_OldVelocity;
-	Vec3 m_OldInternalForce;
+	Vec3 m_oldPosition;
+	Vec3 m_oldVelocity;
+	Vec3 m_oldInternalForce;
 	bool m_bIsFixed;
 
 };
@@ -60,7 +60,7 @@ public:
 	void initUI(DrawingUtilitiesClass * DUC);
 	void reset();
 	void drawFrame(ID3D11DeviceContext* pd3dImmediateContext);
-	void notifyCaseChanged(int testCase);
+	void notifyCaseChanged(int testCase, float& timeStep);
 	void externalForcesCalculations(float timeElapsed);
 	void simulateTimestep(float timeStep);
 	void onClick(int x, int y);
@@ -70,6 +70,7 @@ public:
 	void setMass(float mass);
 	void setStiffness(float stiffness);
 	void setDampingFactor(float damping);
+	void setTimeStep(float& oldTimeStep, float newTimeStep);
 	int addMassPoint(Vec3 position, Vec3 velocity, bool isFixed);
 	void addSpring(int indexPoint1, int indexPoint2, float initialLength);
 	int getNumberOfMassPoints();
@@ -80,8 +81,6 @@ public:
 	void removeMassPoints();
 	void removeSprings();
 	void checkCollision();
-
-	// Additional Functions
 	void applyInternalForce(Spring* spring);
 	Vec3 calculateNewPosition(Vec3 position, Vec3 velocity, float timeStep);
 	Vec3 calculateNewVelocity(Vec3 velocity, Vec3 internalForce, float timeStep);

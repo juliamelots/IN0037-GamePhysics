@@ -59,8 +59,10 @@ void MassSpringSystemSimulator::drawFrame(ID3D11DeviceContext* pd3dImmediateCont
 	DUC->endLine();
 }
 
-
-void MassSpringSystemSimulator::notifyCaseChanged(int testCase)
+//--------------------------------------------------------------------------------------
+// New argument timeStep added to use required time step in demos
+//--------------------------------------------------------------------------------------
+void MassSpringSystemSimulator::notifyCaseChanged(int testCase, float& timeStep)
 {
 	m_iTestCase = testCase;
 	switch (m_iTestCase)
@@ -90,8 +92,6 @@ void MassSpringSystemSimulator::notifyCaseChanged(int testCase)
 		removeSprings();
 
 		// midpoint
-		setMass(10.0);
-		setStiffness(40.0);
 		addMassPoint(Vec3(0, 0, 0), Vec3(-1, 0, 0), false);
 		addMassPoint(Vec3(0, 2, 0), Vec3(1, 0, 0), false);
 		addSpring(0, 1, 1.0);
@@ -106,45 +106,65 @@ void MassSpringSystemSimulator::notifyCaseChanged(int testCase)
 		removeMassPoints();
 		removeSprings();
 
-		setMass(10.0);
-		setStiffness(40.0);
+		// continue as normal euler simulation
 		addMassPoint(Vec3(0, 0, 0), Vec3(-1, 0, 0), false);
 		addMassPoint(Vec3(0, 2, 0), Vec3(1, 0, 0), false);
 		addSpring(0, 1, 1.0);
 		setIntegrator(EULER);
-
 		break;
 	case 1:
 		cout << "Demo 2: simple Euler simulation\n";
-		// [TO-DO] set up 2-point mass-spring system
+		// reset
+		removeMassPoints();
+		removeSprings();
+
+		// euler
+		setMass(10.0);
+		setStiffness(40.0);
+		setTimeStep(timeStep, 0.005);
+		addMassPoint(Vec3(0, 0, 0), Vec3(-1, 0, 0), false);
+		addMassPoint(Vec3(0, 2, 0), Vec3(1, 0, 0), false);
+		addSpring(0, 1, 1.0);
 		setIntegrator(EULER);
-		// [TO-DO] h = 0.005
 		break;
 	case 2:
 		cout << "Demo 3: simple Midpoint simulation\n";
-		// [TO-DO] set up 2-point mass-spring system
+		// reset
+		removeMassPoints();
+		removeSprings();
+
+		// midpoint
+		setMass(10.0);
+		setStiffness(40.0);
+		setTimeStep(timeStep, 0.005);
+		addMassPoint(Vec3(0, 0, 0), Vec3(-1, 0, 0), false);
+		addMassPoint(Vec3(0, 2, 0), Vec3(1, 0, 0), false);
+		addSpring(0, 1, 1.0);
 		setIntegrator(MIDPOINT);
-		// [TO-DO] h = 0.005
 		break;
 	case 3:
 	{
 		cout << "Demo 4: complex simulation\n";
+		// reset
+		removeMassPoints();
+		removeSprings();
+
+		// generate random 10-point system
 		setMass(10);
 		setStiffness(40);
+		TwAddVarRW(DUC->g_pTweakBar, "Timestep", TW_TYPE_FLOAT, timeStep, "step=0.0001 min=0.0001");
 		std::mt19937 eng(time(nullptr));
 		int ballNumber = 10;
 		int springNumber = 10;
 		std::uniform_real_distribution<float> randPos(-0.5f, 0.5f);
 		std::uniform_int_distribution<> randPoint(0, ballNumber - 2);
 		std::uniform_real_distribution<float> randLength(-0.5f, 0.5f);
-		removeMassPoints();
-		removeSprings();
-		cout << "masses: ";
+		cout << "mass points:\n";
 		for (int i = 0; i < ballNumber; i++) {
 			Vec3 pos = Vec3(randPos(eng), randPos(eng), randPos(eng));
 			Vec3 speed = Vec3(randPos(eng), randPos(eng), randPos(eng));
-			addMassPoint( pos, speed, false);
-			cout << i << ": " << speed << pos << " . ";
+			addMassPoint(pos, speed, false);
+			cout << i << ": position " << pos << " velocity " << speed << ".\n";
 		}
 		cout << endl;
 
@@ -162,14 +182,22 @@ void MassSpringSystemSimulator::notifyCaseChanged(int testCase)
 			addSpring(point1Index, point2Index, distance);
 		}
 		setIntegrator(EULER);
-		// [TO-DO] set up 10-point mass-spring system
 		break;
 	}
 	case 4:
 		cout << "Demo 5: optional Leap-frog\n";
-		// [TO-DO] set up 2-point mass-spring system
+		// reset
+		removeMassPoints();
+		removeSprings();
+
+		// leap-frog
+		setMass(10.0);
+		setStiffness(40.0);
+		setTimeStep(timeStep, 0.005);
+		addMassPoint(Vec3(0, 0, 0), Vec3(-1, 0, 0), false);
+		addMassPoint(Vec3(0, 2, 0), Vec3(1, 0, 0), false);
+		addSpring(0, 1, 1.0);
 		setIntegrator(LEAPFROG);
-		// [TO-DO] h = 0.005
 		break;
 	default:
 		cout << "Empty Test\n";
@@ -226,8 +254,8 @@ void MassSpringSystemSimulator::simulateTimestep(float timeStep)
 		}
 		for (MassPoint* massPoint : m_vMassPoints)
 		{
-			massPoint->m_OldPosition = massPoint->m_position;
-			massPoint->m_OldVelocity = massPoint->m_velocity;
+			massPoint->m_oldPosition = massPoint->m_position;
+			massPoint->m_oldVelocity = massPoint->m_velocity;
 			massPoint->m_position = calculateNewPosition(massPoint->m_position, massPoint->m_velocity, timeStep / 2.0);
 			massPoint->m_velocity = calculateNewVelocity(massPoint->m_velocity, massPoint->m_internalForce, timeStep / 2.0);
 			// reset internal force, should be calculated again on next system update
@@ -240,7 +268,7 @@ void MassSpringSystemSimulator::simulateTimestep(float timeStep)
 		}
 		for (MassPoint* massPoint : m_vMassPoints)
 		{
-			massPoint->m_position = calculateNewPosition(massPoint->m_OldPosition, massPoint->m_velocity, timeStep);
+			massPoint->m_position = calculateNewPosition(massPoint->m_oldPosition, massPoint->m_velocity, timeStep);
 			massPoint->m_velocity = calculateNewVelocity(massPoint->m_velocity, massPoint->m_internalForce, timeStep);
 			// reset internal force, should be calculated again on next system update
 			massPoint->m_internalForce = Vec3();
@@ -279,6 +307,11 @@ void MassSpringSystemSimulator::setStiffness(float stiffness)
 void MassSpringSystemSimulator::setDampingFactor(float damping)
 {
 	m_fDamping = damping;
+}
+
+void MassSpringSystemSimulator::setTimeStep(float& oldTimeStep, float newTimeStep)
+{
+	oldTimeStep = newTimeStep;
 }
 
 int MassSpringSystemSimulator::addMassPoint(Vec3 position, Vec3 velocity, bool isFixed)
