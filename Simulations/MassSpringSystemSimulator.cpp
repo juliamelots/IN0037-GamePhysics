@@ -212,7 +212,7 @@ void MassSpringSystemSimulator::externalForcesCalculations(float timeElapsed)
 		{
 			// project the mass point to the camera plane.
 			Vec3 pointPos = massPoint->m_position;
-			// check if the distance between the projected point and the old mouse position is below the preset threshold.
+			// check if the L1 distance between the projected point and the old mouse position is below the preset threshold.
 			// if true, move the point(s) with mouse.
 			if (isClickedPoint(pointPos))
 			{
