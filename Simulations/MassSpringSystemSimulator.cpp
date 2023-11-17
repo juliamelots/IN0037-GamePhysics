@@ -41,7 +41,7 @@ void MassSpringSystemSimulator::drawFrame(ID3D11DeviceContext* pd3dImmediateCont
 	for (MassPoint* massPoint : m_vMassPoints)
 	{
 		DUC->setUpLighting(Vec3(), 0.4 * Vec3(1, 1, 1), 100, Vec3(0, 1, 0));
-		DUC->drawSphere(massPoint->m_position, m_fRadius * Vec3(1, 1, 1));
+		DUC->drawSphere(massPoint->m_position, RADIUS * Vec3(1, 1, 1));
 	}
 	DUC->beginLine();
 	for (Spring* spring : m_vSprings)
@@ -458,24 +458,20 @@ bool MassSpringSystemSimulator::isClickedPoint(Vec3 pointPos)
 //--------------------------------------------------------------------------------------
 void MassSpringSystemSimulator::checkCollision()
 {
-	float minDistanceSquared = (2 * m_fRadius) * (2 * m_fRadius);
+	float minDistanceSquared = (2 * RADIUS) * (2 * RADIUS);
 	for (auto point : m_vMassPoints) {
 		for (auto otherPoint : m_vMassPoints) {
 			if (point == otherPoint) continue;
 			if (point->m_position.squaredDistanceTo(otherPoint->m_position) < minDistanceSquared) {
 				Vec3 diff = point->m_position - otherPoint->m_position;
 				normalize(diff);
-				point->m_position = otherPoint->m_position + (2 * m_fRadius) * diff;
+				point->m_position = otherPoint->m_position + (2 * RADIUS) * diff;
+				point->m_velocity *= -1;
 			}
 		}
-		if (point->m_position.y < FLOOR + m_fRadius) {
-			point->m_position.y = FLOOR + m_fRadius;
+		if (point->m_position.y < FLOOR + RADIUS) {
+			point->m_position.y = FLOOR + RADIUS;
 			point->m_velocity *= -1;
 		}
-		/*if (point.getPosition().z < m_fRadius) {
-			Vec3 position = point.getPosition();
-			position.z = m_fRadius;
-			point.correctPosition(position);
-		} */
 	}
 }

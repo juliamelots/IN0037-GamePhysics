@@ -10,6 +10,7 @@
 // Do Not Change
 
 #define FLOOR -1
+#define RADIUS 0.05f
 
 class MassPoint {
 public:
@@ -104,7 +105,6 @@ private:
 	float m_fDamping;
 	int m_iIntegrator;
 	float m_fGravity;
-	const float m_fRadius = 0.05f;
 	vector<MassPoint*> m_vMassPoints;
 	vector<Spring*> m_vSprings;
 
