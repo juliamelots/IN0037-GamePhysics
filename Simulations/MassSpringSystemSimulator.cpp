@@ -17,23 +17,14 @@ const char* MassSpringSystemSimulator::getTestCasesStr()
 void MassSpringSystemSimulator::initUI(DrawingUtilitiesClass* DUC)
 {
 	this->DUC = DUC;
-	switch (m_iTestCase)
+	if (m_iTestCase == 3)
 	{
-	case 0:
-		break;
-	case 1:
-		break;
-	case 2:
-		break;
-		// [TO-DO] don't allow custom time step for all demos except 4
-	case 3:
 		// allow user to choose integration method
 		TwAddVarRW(DUC->g_pTweakBar, "Integrator Method",
 			TwDefineEnumFromString("Integrator Method", "Euler,Leap-Frog,Midpoint"),
 			&m_iIntegrator, "");
-		break;
-	default:break;
 	}
+	// control of time step done in main.cpp
 }
 
 void MassSpringSystemSimulator::reset() {
@@ -207,16 +198,15 @@ void MassSpringSystemSimulator::externalForcesCalculations(float timeElapsed)
 	mouseDiff.y = m_trackmouse.y - m_oldtrackmouse.y;
 	//cout << "world matrix: " << Mat4(DUC->g_camera.GetWorldMatrix()) << "\n";
 	//cout << "view matrix: " << Mat4(DUC->g_camera.GetViewMatrix()) << "\n";
-	Mat4 worldViewInv = Mat4(DUC->g_camera.GetWorldMatrix() * DUC->g_camera.GetViewMatrix());
-	worldViewInv = worldViewInv.inverse();
-	Vec3 inputView = Vec3((float)mouseDiff.x, (float)-mouseDiff.y, 0);
-	Vec3 inputWorld = worldViewInv.transformVectorNormal(inputView);
-	// find a proper scale!
-	float inputScale = 0.001f;
-	inputWorld = inputWorld * inputScale;
-	
 	if (mouseDiff.x != 0 || mouseDiff.y != 0) 
 	{
+		Mat4 worldViewInv = Mat4(DUC->g_camera.GetWorldMatrix() * DUC->g_camera.GetViewMatrix());
+		worldViewInv = worldViewInv.inverse();
+		Vec3 inputView = Vec3((float)mouseDiff.x, (float)-mouseDiff.y, 0);
+		Vec3 inputWorld = worldViewInv.transformVectorNormal(inputView);
+		// find a proper scale!
+		float inputScale = 0.001f;
+		inputWorld = inputWorld * inputScale;
 		for (MassPoint* massPoint : m_vMassPoints)
 		{
 			// project the mass point to the camera plane.
@@ -288,7 +278,7 @@ void MassSpringSystemSimulator::simulateTimestep(float timeStep)
 		for (MassPoint* massPoint : m_vMassPoints)
 		{
 			massPoint->m_position = calculateNewPosition(massPoint->m_oldPosition, massPoint->m_velocity, timeStep);
-			massPoint->m_velocity = calculateNewVelocity(massPoint->m_velocity, massPoint->m_internalForce, timeStep);
+			massPoint->m_velocity = calculateNewVelocity(massPoint->m_oldVelocity, massPoint->m_internalForce, timeStep);
 			// reset internal force, should be calculated again on next system update
 			massPoint->m_internalForce = Vec3();
 		}
