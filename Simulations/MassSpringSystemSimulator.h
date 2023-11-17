@@ -9,6 +9,8 @@
 #define MIDPOINT 2
 // Do Not Change
 
+#define FLOOR -1
+
 class MassPoint {
 public:
 	// Constructors
@@ -101,6 +103,7 @@ private:
 	float m_fStiffness;
 	float m_fDamping;
 	int m_iIntegrator;
+	float m_fGravity;
 	const float m_fRadius = 0.05f;
 	vector<MassPoint*> m_vMassPoints;
 	vector<Spring*> m_vSprings;

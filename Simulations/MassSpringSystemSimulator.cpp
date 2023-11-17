@@ -5,6 +5,7 @@ MassSpringSystemSimulator::MassSpringSystemSimulator()
 	m_fMass = 0.0;
 	m_fStiffness = 0.0;
 	m_fDamping = 0.0;
+	m_fGravity= 0.0;
 	m_iIntegrator = EULER;
 }
 
@@ -19,7 +20,8 @@ void MassSpringSystemSimulator::initUI(DrawingUtilitiesClass* DUC)
 	this->DUC = DUC;
 	if (m_iTestCase == 3)
 	{
-		// allow user to choose integration method
+		TwAddVarRW(DUC->g_pTweakBar, "Gravity", TW_TYPE_FLOAT, &m_fGravity, "step=0.1 min=0.0");
+		TwAddVarRW(DUC->g_pTweakBar, "Damping", TW_TYPE_FLOAT, &m_fDamping, "step=0.01 min=0.0");
 		TwAddVarRW(DUC->g_pTweakBar, "Integrator Method",
 			TwDefineEnumFromString("Integrator Method", "Euler,Leap-Frog,Midpoint"),
 			&m_iIntegrator, "");
@@ -165,7 +167,6 @@ void MassSpringSystemSimulator::notifyCaseChanged(int testCase)
 			}
 			addSpring(point1Index, point2Index, distance);
 		}
-		setIntegrator(EULER);
 		break;
 	}
 	case 4:
@@ -385,7 +386,7 @@ Vec3 MassSpringSystemSimulator::calculateNewPosition(Vec3 position, Vec3 velocit
 //--------------------------------------------------------------------------------------
 Vec3 MassSpringSystemSimulator::calculateNewVelocity(Vec3 velocity, Vec3 internalForce, float timeStep)
 {
-	Vec3 acceleration = (internalForce - m_fDamping * velocity) / m_fMass;
+	Vec3 acceleration = (internalForce + Vec3(0, -m_fGravity, 0) - m_fDamping * velocity) / m_fMass;
 	return velocity + timeStep * acceleration;
 }
 
@@ -466,6 +467,10 @@ void MassSpringSystemSimulator::checkCollision()
 				normalize(diff);
 				point->m_position = otherPoint->m_position + (2 * m_fRadius) * diff;
 			}
+		}
+		if (point->m_position.y < FLOOR + m_fRadius) {
+			point->m_position.y = FLOOR + m_fRadius;
+			point->m_velocity *= -1;
 		}
 		/*if (point.getPosition().z < m_fRadius) {
 			Vec3 position = point.getPosition();
