@@ -206,13 +206,13 @@ void MassSpringSystemSimulator::externalForcesCalculations(float timeElapsed)
 		Vec3 inputView = Vec3((float)mouseDiff.x, (float)-mouseDiff.y, 0);
 		Vec3 inputWorld = worldViewInv.transformVectorNormal(inputView);
 		// find a proper scale!
-		float inputScale = 0.001f;
+		float inputScale = 0.00001f;
 		inputWorld = inputWorld * inputScale;
 		for (MassPoint* massPoint : m_vMassPoints)
 		{
 			// project the mass point to the camera plane.
 			Vec3 pointPos = massPoint->m_position;
-			// check if the L1 distance between the projected point and the old mouse position is below the preset threshold.
+			// check if the distance between the projected point and the old mouse position is below the preset threshold.
 			// if true, move the point(s) with mouse.
 			if (isClickedPoint(pointPos))
 			{
@@ -438,7 +438,7 @@ bool MassSpringSystemSimulator::isClickedPoint(Vec3 pointPos)
 	// Perform perspective division to get normalized device coordinates (NDC)
 	normalize(ndcPoint);
 
-	float inputScale = 0.001f;
+	float inputScale = 0.0005f;
 	/*
 	cout << "ndcPoint: " << ndcPoint << "\n";
 	cout << "x diff: " << abs(ndcPoint.x - m_oldtrackmouse.x * inputScale) << "\n";
