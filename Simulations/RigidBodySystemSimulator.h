@@ -1,6 +1,8 @@
 #ifndef RIGIDBODYSYSTEMSIMULATOR_h
 #define RIGIDBODYSYSTEMSIMULATOR_h
 #include "Simulator.h"
+#include "util/matrixbase.h"
+
 //add your header for your rigid body system, for e.g.,
 //#include "rigidBodySystem.h" 
 
@@ -14,7 +16,19 @@ public:
 	Vec3 m_velocity;
 	Vec3 m_angularVelocity;
 	Vec3 m_angularMomentum;
-	Vec3 m_inertiaTensor;
+	GamePhysics::Mat4d m_initialIntertiaTensor;
+
+	Vec3 m_size;
+
+public:
+	Rigidbody();
+
+	Rigidbody(Vec3 position, Vec3 size, int mass) {
+		m_position = position;
+		m_mass = static_cast<float>(mass);
+		m_size = size;
+		//TODO: calculate m_initialIntertiaTensorFrom size
+	}
 };
 
 class RigidBodySystemSimulator:public Simulator{
@@ -50,7 +64,7 @@ private:
 	// RigidBodySystem * m_pRigidBodySystem; 
 	Vec3 m_externalForce;
 	std::vector<Rigidbody> m_rigidbodies;
-	Vec3 m_eternalForcePosition;
+	Vec3 m_externalForcePosition;
 
 	// UI Attributes
 	Point2D m_mouse;
