@@ -2,7 +2,7 @@
 
 const char* RigidBodySystemSimulator::getTestCasesStr()
 {
-    return nullptr;
+    return "Demo1: One-Step, Demo2: Single-body, Demo3: Two-body, Demo4: Complex";
 }
 
 void RigidBodySystemSimulator::initUI(DrawingUtilitiesClass* DUC)
@@ -36,6 +36,21 @@ void RigidBodySystemSimulator::onClick(int x, int y)
 
 void RigidBodySystemSimulator::onMouse(int x, int y)
 {
+}
+
+void RigidBodySystemSimulator::calculateTorque(float timeStep)
+{
+    for (auto rigidbody : m_rigidbodies) {
+        Vec3 externalForceDiff = m_eternalForcePosition - rigidbody.m_position;
+        Vec3 torque = cross(externalForceDiff, m_externalForce);
+        rigidbody.m_rotation += (timeStep / 2) * 
+            Quat(0, rigidbody.m_angularVelocity.x, rigidbody.m_angularVelocity.y, rigidbody.m_angularVelocity.z) * rigidbody.m_rotation;
+        rigidbody.m_angularMomentum += timeStep * torque;
+
+
+    }
+
+
 }
 
 int RigidBodySystemSimulator::getNumberOfRigidBodies()

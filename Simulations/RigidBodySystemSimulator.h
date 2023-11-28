@@ -6,6 +6,17 @@
 
 #define TESTCASEUSEDTORUNTEST 2
 
+class Rigidbody {
+public:
+	float m_mass;
+	Vec3 m_position;
+	Quat m_rotation;
+	Vec3 m_velocity;
+	Vec3 m_angularVelocity;
+	Vec3 m_angularMomentum;
+	Vec3 m_inertiaTensor;
+};
+
 class RigidBodySystemSimulator:public Simulator{
 public:
 	// Construtors
@@ -21,6 +32,7 @@ public:
 	void simulateTimestep(float timeStep);
 	void onClick(int x, int y);
 	void onMouse(int x, int y);
+	void calculateTorque(float timeStep);
 
 	// ExtraFunctions
 	int getNumberOfRigidBodies();
@@ -37,6 +49,8 @@ private:
 	// add your RigidBodySystem data members, for e.g.,
 	// RigidBodySystem * m_pRigidBodySystem; 
 	Vec3 m_externalForce;
+	std::vector<Rigidbody> m_rigidbodies;
+	Vec3 m_eternalForcePosition;
 
 	// UI Attributes
 	Point2D m_mouse;
