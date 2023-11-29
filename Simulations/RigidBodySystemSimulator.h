@@ -27,8 +27,14 @@ public:
 		m_position = position;
 		m_mass = static_cast<float>(mass);
 		m_size = size;
+		m_initialIntertiaTensor = GamePhysics::Mat4d();
 		//TODO: calculate m_initialIntertiaTensorFrom size
 	}
+
+
+	Vec3 getVelocityOfPosition(Vec3 point);
+	Vec3 getPositionAfterRotation(Vec3 initialPos);
+	Vec3 getWorldPositionOfPoint(Vec3 point);
 };
 
 class RigidBodySystemSimulator:public Simulator{
@@ -57,6 +63,8 @@ public:
 	void addRigidBody(Vec3 position, Vec3 size, int mass);
 	void setOrientationOf(int i,Quat orientation);
 	void setVelocityOf(int i, Vec3 velocity);
+
+	void removeRigidbodies();
 
 private:
 	// Attributes

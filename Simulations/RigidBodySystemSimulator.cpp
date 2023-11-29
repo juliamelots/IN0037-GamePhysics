@@ -1,5 +1,8 @@
 #include "RigidBodySystemSimulator.h"
 
+
+
+
 const char* RigidBodySystemSimulator::getTestCasesStr()
 {
     return "Demo1: One-Step, Demo2: Single-body, Demo3: Two-body, Demo4: Complex";
@@ -7,7 +10,7 @@ const char* RigidBodySystemSimulator::getTestCasesStr()
 
 void RigidBodySystemSimulator::initUI(DrawingUtilitiesClass* DUC)
 {
-
+    this->DUC = DUC;
 }
 
 void RigidBodySystemSimulator::reset()
@@ -16,10 +19,30 @@ void RigidBodySystemSimulator::reset()
 
 void RigidBodySystemSimulator::drawFrame(ID3D11DeviceContext* pd3dImmediateContext)
 {
+    for (auto rigidbody : m_rigidbodies) {
+        DUC->setUpLighting(Vec3(), 0.4 * Vec3(1, 1, 1), 100, Vec3(0, 1, 0));
+        auto scaleMatrix = GamePhysics::Mat4d();
+        scaleMatrix.initScaling(rigidbody.m_size.x, rigidbody.m_size.y, rigidbody.m_size.z);
+        auto translationMatrix = GamePhysics::Mat4d();
+        translationMatrix.initTranslation(rigidbody.m_position.x, rigidbody.m_position.y, rigidbody.m_position.z);
+        auto drawMat = scaleMatrix * rigidbody.m_rotation.getRotMat() * translationMatrix;
+        DUC->drawRigidBody(drawMat);
+    }
 }
 
 void RigidBodySystemSimulator::notifyCaseChanged(int testCase)
 {
+    m_iTestCase = testCase;
+    switch (m_iTestCase) {
+    case 0:
+        cout << "Demo 1" << endl;
+
+        removeRigidbodies();
+        auto newRigidbody = Rigidbody(Vec3(0,0,0), Vec3(1, 0.6, 0.5), 2);
+        newRigidbody.m_rotation = Quat(0, 0, 90 / 180 * M_PI);
+        m_externalForcePosition = (0.3, 0.5, 0.25);
+        m_externalForce = (1, 1, 0);
+    }
 }
 
 void RigidBodySystemSimulator::externalForcesCalculations(float timeElapsed)
@@ -101,10 +124,23 @@ void RigidBodySystemSimulator::setVelocityOf(int i, Vec3 velocity)
     m_rigidbodies[i].m_velocity = velocity;
 }
 
+void RigidBodySystemSimulator::removeRigidbodies()
+{
+    m_rigidbodies.clear();
+    m_rigidbodies.shrink_to_fit();
+}
 
+Vec3 Rigidbody::getVelocityOfPosition(Vec3 pos)
+{
+    return m_velocity + cross(m_angularVelocity, getPositionAfterRotation(pos));
+}
 
+Vec3 Rigidbody::getPositionAfterRotation(Vec3 initialPos)
+{
+    return m_rotation.getRotMat().transformVector(initialPos);
+}
 
-
-
-
-
+Vec3 Rigidbody::getWorldPositionOfPoint(Vec3 point)
+{
+    return m_position + getPositionAfterRotation(point);
+}
