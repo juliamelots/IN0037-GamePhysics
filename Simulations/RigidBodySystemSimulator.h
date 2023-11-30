@@ -2,6 +2,7 @@
 #define RIGIDBODYSYSTEMSIMULATOR_h
 #include "Simulator.h"
 #include "util/matrixbase.h"
+#include "collisionDetect.h"
 
 //add your header for your rigid body system, for e.g.,
 //#include "rigidBodySystem.h" 
@@ -35,6 +36,7 @@ public:
 	Vec3 getVelocityOfPosition(Vec3 point);
 	Vec3 getPositionAfterRotation(Vec3 initialPos);
 	Vec3 getWorldPositionOfPoint(Vec3 point);
+	Mat4 getlocalToWorldMat();
 };
 
 class RigidBodySystemSimulator:public Simulator{
