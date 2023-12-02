@@ -28,7 +28,13 @@ public:
 		m_position = position;
 		m_mass = static_cast<float>(mass);
 		m_size = size;
-		m_initialIntertiaTensor = GamePhysics::Mat4d();
+		double massToDozen = m_mass / 12.0f;
+		m_initialIntertiaTensor = GamePhysics::Mat4( (size.y * size.y + size.z * size.z) ,0, 0, 0,
+			0, (size.x * size.x + size.z * size.z), 0, 0,
+			0, 0, (size.x * size.x + size.y * size.y),0,
+			0, 0, 0, 1) * massToDozen;
+		m_initialIntertiaTensor = m_initialIntertiaTensor.inverse();
+
 		//TODO: calculate m_initialIntertiaTensorFrom size
 	}
 

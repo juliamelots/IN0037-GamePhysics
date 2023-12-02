@@ -39,8 +39,15 @@ void RigidBodySystemSimulator::notifyCaseChanged(int testCase)
         auto newRigidbody = Rigidbody(Vec3(0,0,0), Vec3(1, 0.6, 0.5), 2);
         newRigidbody.m_rotation = Quat(0, 0, 90 / 180 * M_PI);
         m_rigidbodies.push_back(newRigidbody);
-        m_externalForcePosition = (0.3, 0.5, 0.25);
-        m_externalForce = (1, 1, 0);
+        m_externalForcePosition = Vec3(0.3, 0.5, 0.25);
+        m_externalForce = Vec3(1, 1, 0);
+        simulateTimestep(0.001);
+
+        cout << "Demo 1 results, position: " << m_rigidbodies[0].m_position << endl;
+        cout << "cm velocity: " << m_rigidbodies[0].m_velocity << endl;
+        cout << "cm ang. veloctiy: " << m_rigidbodies[0].m_angularVelocity << endl;
+        cout << "cm velocity of  (0.3, 0.5, 0.25): " << m_rigidbodies[0].getVelocityOfPosition(Vec3(0.3, 0.5, 0.25), true);
+        m_externalForce = Vec3();
     }
 }
 
@@ -76,16 +83,17 @@ void RigidBodySystemSimulator::simulateTimestep(float timeStep)
     }
 
 
-    for (auto rigidbody : m_rigidbodies) {
+    for (auto& rigidbody : m_rigidbodies) {
         //positional stuff
         rigidbody.m_position += timeStep * rigidbody.m_velocity;
         rigidbody.m_velocity += timeStep * m_externalForce / rigidbody.m_mass;
-
+        cout << m_externalForce << " " << rigidbody.m_velocity << " " << timeStep << endl;
         //rotational stuff
         Vec3 externalForceDiff = m_externalForcePosition - rigidbody.m_position;
         Vec3 torque = cross(externalForceDiff, m_externalForce);
         rigidbody.m_rotation += (timeStep / 2) *
             Quat(0, rigidbody.m_angularVelocity.x, rigidbody.m_angularVelocity.y, rigidbody.m_angularVelocity.z) * rigidbody.m_rotation;
+        rigidbody.m_rotation = rigidbody.m_rotation.unit();
         rigidbody.m_angularMomentum += timeStep * torque;
         auto rotMat = rigidbody.m_rotation.getRotMat();
         auto inverseRotMat = rigidbody.m_rotation.getRotMat();
@@ -96,10 +104,10 @@ void RigidBodySystemSimulator::simulateTimestep(float timeStep)
 
 
     if (m_iTestCase == 0) {
-        cout << "Demo 1 results, position: " << m_rigidbodies[0].m_position << endl;
-        cout << "cm velocity: " << m_rigidbodies[0].m_velocity << endl;
-        cout << "cm ang. veloctiy: " << m_rigidbodies[0].m_angularVelocity << endl;
-        cout << "cm velocity of  (0.3, 0.5, 0.25): " << m_rigidbodies[0].getVelocityOfPosition(Vec3(0.3, 0.5, 0.25), true);
+        //cout << "Demo 1 results, position: " << m_rigidbodies[0].m_position << endl;
+        //cout << "cm velocity: " << m_rigidbodies[0].m_velocity << endl;
+        //cout << "cm ang. veloctiy: " << m_rigidbodies[0].m_angularVelocity << endl;
+        //cout << "cm velocity of  (0.3, 0.5, 0.25): " << m_rigidbodies[0].getVelocityOfPosition(Vec3(0.3, 0.5, 0.25), true);
     }
 }
 
