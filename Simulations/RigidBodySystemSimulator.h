@@ -33,9 +33,11 @@ public:
 	}
 
 
+	Vec3 getVelocityOfPosition(Vec3 point, bool positionInObjectSpace);
 	Vec3 getVelocityOfPosition(Vec3 point);
 	Vec3 getPositionAfterRotation(Vec3 initialPos);
 	Vec3 getWorldPositionOfPoint(Vec3 point);
+	Mat4 getIntertiaTensor();
 	Mat4 getlocalToWorldMat();
 };
 
