@@ -1,7 +1,9 @@
 #include "RigidBodySystemSimulator.h"
 
 
-
+RigidBodySystemSimulator::RigidBodySystemSimulator()
+{
+}
 
 const char* RigidBodySystemSimulator::getTestCasesStr()
 {
@@ -192,5 +194,5 @@ Mat4 Rigidbody::getlocalToWorldMat()
     scaleMatrix.initScaling(m_size.x, m_size.y, m_size.z);
     auto translationMatrix = GamePhysics::Mat4d();
     translationMatrix.initTranslation(m_position.x, m_position.y, m_position.z);
-    auto drawMat = scaleMatrix * m_rotation.getRotMat() * translationMatrix;
+    return scaleMatrix * m_rotation.getRotMat() * translationMatrix;
 }
