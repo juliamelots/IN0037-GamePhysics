@@ -32,22 +32,46 @@ void RigidBodySystemSimulator::notifyCaseChanged(int testCase)
 {
     m_iTestCase = testCase;
     switch (m_iTestCase) {
-    case 0:
-        cout << "Demo 1" << endl;
+        case 0:
+        {
+            cout << "Demo 1: A simple one-step test" << endl;
 
-        removeRigidbodies();
-        auto newRigidbody = Rigidbody(Vec3(0,0,0), Vec3(1, 0.6, 0.5), 2);
-        newRigidbody.m_rotation = Quat(0, 0, 90 / 180 * M_PI);
-        m_rigidbodies.push_back(newRigidbody);
-        m_externalForcePosition = Vec3(0.3, 0.5, 0.25);
-        m_externalForce = Vec3(1, 1, 0);
-        simulateTimestep(0.001);
+            removeRigidbodies();
+            auto newRigidbody = Rigidbody(Vec3(0, 0, 0), Vec3(1, 0.6, 0.5), 2);
+            newRigidbody.m_rotation = Quat(0, 0, 90 / 180 * M_PI);
+            m_rigidbodies.push_back(newRigidbody);
+            m_externalForcePosition = Vec3(0.3, 0.5, 0.25);
+            m_externalForce = Vec3(1, 1, 0);
+            simulateTimestep(2);
 
-        cout << "Demo 1 results, position: " << m_rigidbodies[0].m_position << endl;
-        cout << "cm velocity: " << m_rigidbodies[0].m_velocity << endl;
-        cout << "cm ang. veloctiy: " << m_rigidbodies[0].m_angularVelocity << endl;
-        cout << "cm velocity of  (0.3, 0.5, 0.25): " << m_rigidbodies[0].getVelocityOfPosition(Vec3(0.3, 0.5, 0.25), true);
-        m_externalForce = Vec3();
+            cout << "Demo 1 results, position: " << m_rigidbodies[0].m_position << endl;
+            cout << "cm velocity: " << m_rigidbodies[0].m_velocity << endl;
+            cout << "cm ang. veloctiy: " << m_rigidbodies[0].m_angularVelocity << endl;
+            cout << "cm velocity of  (0.3, 0.5, 0.25): " << m_rigidbodies[0].getVelocityOfPosition(Vec3(0.3, 0.5, 0.25), true);
+            m_externalForce = Vec3();
+            break;
+        }
+        case 1:
+        {
+            cout << "Demo 2: Simple single-body simulation" << endl;
+
+            removeRigidbodies();
+            std::mt19937 eng(time(nullptr));
+            std::uniform_real_distribution<float> randSpeed(-0.5f, 0.5f);
+            std::uniform_real_distribution<float> randPos(-3.0f, 3.0f);
+            std::uniform_real_distribution<float> randSize(-0.5f, 0.5f);
+            auto newRigidbody = Rigidbody(Vec3(randPos(eng), randPos(eng), randPos(eng)), Vec3(randSize(eng), randSize(eng), randSize(eng)), 2);
+            newRigidbody.m_rotation = Quat(0, 0, 90 / 180 * M_PI);
+            m_rigidbodies.push_back(newRigidbody);
+            m_externalForcePosition = Vec3(0.3, 0.5, 0.25);
+            m_externalForce = Vec3(0.5, 0.5, 0);
+            break;
+        }
+        case 2:
+        {
+            cout << "Demo 2: Simple collision simulation" << endl;
+
+        }
     }
 }
 
@@ -87,7 +111,6 @@ void RigidBodySystemSimulator::simulateTimestep(float timeStep)
         //positional stuff
         rigidbody.m_position += timeStep * rigidbody.m_velocity;
         rigidbody.m_velocity += timeStep * m_externalForce / rigidbody.m_mass;
-        cout << m_externalForce << " " << rigidbody.m_velocity << " " << timeStep << endl;
         //rotational stuff
         Vec3 externalForceDiff = m_externalForcePosition - rigidbody.m_position;
         Vec3 torque = cross(externalForceDiff, m_externalForce);
@@ -142,6 +165,7 @@ Vec3 RigidBodySystemSimulator::getAngularVelocityOfRigidBody(int i)
 
 void RigidBodySystemSimulator::applyForceOnBody(int i, Vec3 loc, Vec3 force)
 {
+    //m_rigidbodies[i].m_;
 }
 
 void RigidBodySystemSimulator::addRigidBody(Vec3 position, Vec3 size, int mass)

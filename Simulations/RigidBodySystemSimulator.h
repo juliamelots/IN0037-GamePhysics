@@ -3,6 +3,7 @@
 #include "Simulator.h"
 #include "util/matrixbase.h"
 #include "collisionDetect.h"
+#include <ctime>
 
 //add your header for your rigid body system, for e.g.,
 //#include "rigidBodySystem.h" 
