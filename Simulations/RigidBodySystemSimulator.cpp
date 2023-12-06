@@ -24,7 +24,6 @@ void RigidBodySystemSimulator::reset()
 
 void RigidBodySystemSimulator::drawFrame(ID3D11DeviceContext* pd3dImmediateContext)
 {
-    auto i = 0;
     std::mt19937 eng;
     std::uniform_real_distribution<float> randColor(0, 1);
     for (auto rigidbody : m_rigidBodies) {
