@@ -4,6 +4,9 @@ RigidBodySystemSimulator::RigidBodySystemSimulator()
 {
 	m_iTestCase = 0;
 	m_externalForce = Vec3();
+    m_externalForcePosition = Vec3();
+    m_fCoefRestitution = 1.0;
+    m_fGravity = 9.8;
 }
 
 const char* RigidBodySystemSimulator::getTestCasesStr() {
@@ -13,6 +16,11 @@ const char* RigidBodySystemSimulator::getTestCasesStr() {
 void RigidBodySystemSimulator::initUI(DrawingUtilitiesClass* DUC)
 {
     this->DUC = DUC;
+    if (m_iTestCase == 3)
+    {
+        TwAddVarRW(DUC->g_pTweakBar, "Coefficient of Restitution", TW_TYPE_FLOAT, &m_fCoefRestitution, "step=0.1 min=0.0 max=1.0");
+        TwAddVarRW(DUC->g_pTweakBar, "Gravity", TW_TYPE_FLOAT, &m_fGravity, "step=0.1 min=0.0");
+    }
 }
 
 void RigidBodySystemSimulator::reset()
@@ -66,33 +74,34 @@ void RigidBodySystemSimulator::externalForcesCalculations(float timeElapsed)
 
 void RigidBodySystemSimulator::simulateTimestep(float timeStep)
 {
-    float c = 1;
-    for (size_t i = 0; i < m_rigidBodies.size(); i++) {
-        Mat4 worldPosMat = m_rigidBodies[i].getlocalToWorldMat();
-        for (size_t j = i + 1; j < m_rigidBodies.size(); j++) {
-            CollisionInfo collision = checkCollisionSAT(worldPosMat, m_rigidBodies[j].getlocalToWorldMat());
-            if (collision.isValid) {
-
-                RigidBody& rigidBody_a = m_rigidBodies[i];
-                RigidBody& rigidBody_b = m_rigidBodies[j];
-                auto x_a = collision.collisionPointWorld - rigidBody_a.m_position;
-                auto x_b = collision.collisionPointWorld - rigidBody_b.m_position;
-                auto v_tild_a = rigidBody_a.getVelocityOfPosition(x_a);
-                auto v_tild_b = rigidBody_b.getVelocityOfPosition(x_b);
-                auto v_rel = v_tild_b - v_tild_a;
+    for (size_t i = 0; i < m_rigidBodies.size(); i++)
+    {
+        RigidBody& rigidBody_a = m_rigidBodies.at(i);
+        Mat4 worldPosMat = rigidBody_a.getlocalToWorldMat();
+        for (size_t j = i + 1; j < m_rigidBodies.size(); j++)
+        {
+            RigidBody& rigidBody_b = m_rigidBodies.at(j);
+            CollisionInfo collision = checkCollisionSAT(worldPosMat, rigidBody_b.getlocalToWorldMat());
+            if (collision.isValid)
+            {
+                Vec3 x_a = collision.collisionPointWorld - rigidBody_a.m_position;
+                Vec3 x_b = collision.collisionPointWorld - rigidBody_b.m_position;
+                Vec3 v_rel = rigidBody_a.getVelocityOfPosition(x_a) - rigidBody_b.getVelocityOfPosition(x_b);
                 cout << collision.normalWorld << endl;
-                if (dot(v_rel, collision.normalWorld) > 0) {
-                    auto j = -(1 + c) * dot(v_rel, collision.normalWorld) / (1 / rigidBody_a.m_mass + 1 / rigidBody_b.m_mass + dot(
+                if (dot(v_rel, collision.normalWorld) > 0)
+                {
+                    Vec3 impulse = -(1 + m_fCoefRestitution) * dot(v_rel, collision.normalWorld) /
+                        (1 / rigidBody_a.m_mass + 1 / rigidBody_b.m_mass + dot(
                         cross(rigidBody_a.getInverseIntertiaTensor().transformVector(cross(x_a, collision.normalWorld)), x_a) +
-                        cross(rigidBody_b.getInverseIntertiaTensor().transformVector(cross(x_b, collision.normalWorld)), x_b), collision.normalWorld)
-                        );
-                    cout << "before velocity" << rigidBody_a.m_velocity;
-                    rigidBody_a.m_velocity -= (j / rigidBody_a.m_mass) * collision.normalWorld;
-                    cout << "after velocity" << rigidBody_a.m_velocity;
-                    rigidBody_b.m_velocity += (j / rigidBody_b.m_mass) * collision.normalWorld;
+                        cross(rigidBody_b.getInverseIntertiaTensor().transformVector(cross(x_b, collision.normalWorld)), x_b)
+                        , collision.normalWorld));
+                    cout << "before velocity" << rigidBody_a.m_linearVelocity;
+                    rigidBody_a.m_linearVelocity += (impulse / rigidBody_a.m_mass) * collision.normalWorld;
+                    cout << "after velocity" << rigidBody_a.m_linearVelocity;
+                    rigidBody_b.m_linearVelocity -= (impulse / rigidBody_b.m_mass) * collision.normalWorld;
                     cout << endl;
-                    rigidBody_a.m_angularMomentum = rigidBody_a.m_angularMomentum + cross(x_a, j * collision.normalWorld);
-                    rigidBody_b.m_angularMomentum = rigidBody_b.m_angularMomentum - cross(x_b, j * collision.normalWorld);
+                    rigidBody_a.m_angularMomentum += cross(x_a, impulse * collision.normalWorld);
+                    rigidBody_b.m_angularMomentum -= cross(x_b, impulse * collision.normalWorld);
                     cout << "collide" << endl;
                 }
             }
@@ -100,42 +109,86 @@ void RigidBodySystemSimulator::simulateTimestep(float timeStep)
     }
 
 
-    for (auto& rigidBody : m_rigidBodies) {
-        //positional stuff
-        rigidBody.m_position += timeStep * rigidBody.m_velocity;
+    for (auto& rigidBody : m_rigidBodies)
+    {
+        // Position update
+        rigidBody.m_position += timeStep * rigidBody.m_linearVelocity;
         rigidBody.m_translationMatrix.initTranslation(rigidBody.m_position.x, rigidBody.m_position.y, rigidBody.m_position.z);
 
-        rigidBody.m_velocity += timeStep * m_externalForce / rigidBody.m_mass;
-        //rotational stuff
-        Vec3 externalForceDiff = m_externalForcePosition - rigidBody.m_position;
-        Vec3 torque = cross(externalForceDiff, m_externalForce);
-        rigidBody.m_rotation += (timeStep / 2) *
-            Quat(0, rigidBody.m_angularVelocity.x, rigidBody.m_angularVelocity.y, rigidBody.m_angularVelocity.z) * rigidBody.m_rotation;
+        // Linear velocity update
+        rigidBody.m_linearVelocity += timeStep * m_externalForce / rigidBody.m_mass;
+
+        // Angular velocity and rotation update
+        rigidBody.m_rotation += (timeStep / 2.0) * Quat(rigidBody.m_angularVelocity.x, rigidBody.m_angularVelocity.y, rigidBody.m_angularVelocity.z, 0) * rigidBody.m_rotation;
         rigidBody.m_rotation = rigidBody.m_rotation.unit();
-        rigidBody.m_angularMomentum += timeStep * torque;
-        auto rotMat = rigidBody.m_rotation.getRotMat();
-        auto inverseRotMat = rigidBody.m_rotation.getRotMat();
+        rigidBody.m_angularMomentum += timeStep * rigidBody.m_torqueExternalForce;
+        Mat4 rotMat = rigidBody.m_rotation.getRotMat();
+        Mat4 inverseRotMat = rigidBody.m_rotation.getRotMat();
         inverseRotMat.transpose();
-        auto newI = (rotMat * rigidBody.m_initialInverseIntertiaTensor) * inverseRotMat;
-        rigidBody.m_angularVelocity = newI * rigidBody.m_angularMomentum;
+        Mat4 inverseInertiaTensor = inverseRotMat * rigidBody.m_initialInverseIntertiaTensor * rotMat;
+        rigidBody.m_angularVelocity = inverseInertiaTensor.transformVector(rigidBody.m_angularMomentum);
     }
 }
 
 void RigidBodySystemSimulator::onClick(int x, int y)
 {
+    m_trackmouse.x = x;
+    m_trackmouse.y = y;
 }
 
 void RigidBodySystemSimulator::onMouse(int x, int y)
 {
+    m_oldtrackmouse.x = x;
+    m_oldtrackmouse.y = y;
+    m_trackmouse.x = x;
+    m_trackmouse.y = y;
+}
+
+int RigidBodySystemSimulator::getNumberOfRigidBodies()
+{
+    return m_rigidBodies.size();
+}
+
+Vec3 RigidBodySystemSimulator::getPositionOfRigidBody(int i)
+{
+    RigidBody& rigidBody = m_rigidBodies.at(i);
+    return rigidBody.m_position;
+}
+
+Vec3 RigidBodySystemSimulator::getLinearVelocityOfRigidBody(int i)
+{
+    RigidBody& rigidBody = m_rigidBodies.at(i);
+    return rigidBody.m_linearVelocity;
+}
+
+Vec3 RigidBodySystemSimulator::getAngularVelocityOfRigidBody(int i)
+{
+    RigidBody& rigidBody = m_rigidBodies.at(i);
+    return rigidBody.m_angularVelocity;
 }
 
 void RigidBodySystemSimulator::applyForceOnBody(int i, Vec3 loc, Vec3 force)
 {
+    RigidBody& rigidBody = m_rigidBodies.at(i);
+    m_externalForce += force; // TO-DO sure?
+    rigidBody.m_torqueExternalForce = cross((loc - rigidBody.m_position), force);
 }
 
 void RigidBodySystemSimulator::addRigidBody(Vec3 position, Vec3 size, int mass)
 {
     m_rigidBodies.push_back(RigidBody(position, size, mass));
+}
+
+void RigidBodySystemSimulator::setOrientationOf(int i, Quat orientation)
+{
+    RigidBody& rigidBody = m_rigidBodies.at(i);
+    rigidBody.m_rotation = orientation;
+}
+
+void RigidBodySystemSimulator::setVelocityOf(int i, Vec3 velocity)
+{
+    RigidBody& rigidBody = m_rigidBodies.at(i);
+    rigidBody.m_linearVelocity = velocity;
 }
 
 void RigidBodySystemSimulator::removeRigidBodies()
@@ -144,10 +197,9 @@ void RigidBodySystemSimulator::removeRigidBodies()
     m_rigidBodies.shrink_to_fit();
 }
 
-
-
-Vec3 RigidBody::getVelocityOfPosition(Vec3 pos) {
-	return m_velocity + cross(m_angularVelocity, pos);
+Vec3 RigidBody::getVelocityOfPosition(Vec3 pos)
+{
+	return m_linearVelocity + cross(m_angularVelocity, pos);
 }
 
 Vec3 RigidBody::getWorldPositionOfPoint(Vec3 pos)
