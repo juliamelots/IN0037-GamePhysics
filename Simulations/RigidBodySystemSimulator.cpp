@@ -103,6 +103,8 @@ void RigidBodySystemSimulator::simulateTimestep(float timeStep)
     for (auto& rigidBody : m_rigidBodies) {
         //positional stuff
         rigidBody.m_position += timeStep * rigidBody.m_velocity;
+        rigidBody.m_translationMatrix.initTranslation(rigidBody.m_position.x, rigidBody.m_position.y, rigidBody.m_position.z);
+
         rigidBody.m_velocity += timeStep * m_externalForce / rigidBody.m_mass;
         //rotational stuff
         Vec3 externalForceDiff = m_externalForcePosition - rigidBody.m_position;
