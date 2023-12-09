@@ -182,7 +182,7 @@ void RigidBodySystemSimulator::simulateTimestep(float timeStep)
                 // cout << collision.normalWorld << endl;
                 if (dot(v_rel, collision.normalWorld) < 0)
                 {
-                    Vec3 impulse = -(1 + m_fCoefRestitution) * dot(v_rel, collision.normalWorld) /
+                    float impulse = -(1 + m_fCoefRestitution) * dot(v_rel, collision.normalWorld) /
                         (1 / rigidBody_a.m_mass + 1 / rigidBody_b.m_mass + dot(
                             cross(rigidBody_a.getInverseIntertiaTensor().transformVector(cross(x_a, collision.normalWorld)), x_a) +
                             cross(rigidBody_b.getInverseIntertiaTensor().transformVector(cross(x_b, collision.normalWorld)), x_b)
@@ -207,7 +207,7 @@ void RigidBodySystemSimulator::simulateTimestep(float timeStep)
             Vec3 v_rel = rigidBody_a.getVelocityOfPosition(x_a); // the velocity of the ground collision point is (0, 0, 0)
             // cout << collision.normalWorld << endl;
             if (dot(v_rel, collision.normalWorld) < 0) {
-                Vec3 impulse = -(1 + m_fCoefRestitution) * dot(v_rel, collision.normalWorld) /
+                float impulse = -(1 + m_fCoefRestitution) * dot(v_rel, collision.normalWorld) /
                     (1 / rigidBody_a.m_mass + dot(
                         cross(rigidBody_a.getInverseIntertiaTensor().transformVector(cross(x_a, collision.normalWorld)), x_a)
                         , collision.normalWorld));
