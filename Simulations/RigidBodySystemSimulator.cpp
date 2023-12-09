@@ -82,7 +82,7 @@ void RigidBodySystemSimulator::notifyCaseChanged(int testCase)
     }
     case 2:
     {
-        cout << "Demo 2: Simple collision simulation" << endl;
+        cout << "Demo 3: Simple collision simulation" << endl;
         removeRigidBodies();
         auto newRigidbody = RigidBody(Vec3(0, 0.5, 0), Vec3(1, 0.6, 0.5), 2);
         newRigidbody.m_rotation = Quat(0, 0, 0);
@@ -93,6 +93,32 @@ void RigidBodySystemSimulator::notifyCaseChanged(int testCase)
         newRigidbody2.m_linearVelocity = Vec3(0, -0.1f, 0);
         newRigidbody2.m_rotation = Quat(30.0 / 180.0 * M_PI, 30.0 / 180.0 * M_PI, 45.0 / 180.0 * M_PI, 0);
         m_rigidBodies.push_back(newRigidbody2);
+        break;
+    }
+    case 3:
+    {
+        cout << "Demo 4: Complex simulation" << endl;
+        removeRigidBodies();
+
+        auto newRigidbody = RigidBody(Vec3(0, 0.5, 0), Vec3(1, 0.6, 0.5), 2);
+        newRigidbody.m_rotation = Quat(0, 0, 0);
+        newRigidbody.m_linearVelocity = Vec3(0, 0.1f, 0);
+        m_rigidBodies.push_back(newRigidbody);
+
+        auto newRigidbody2 = RigidBody(Vec3(0, 2, 0), Vec3(1, 0.6, 0.5), 2);
+        newRigidbody2.m_linearVelocity = Vec3(0, -0.1f, 0);
+        newRigidbody2.m_rotation = Quat(30.0 / 180.0 * M_PI, 30.0 / 180.0 * M_PI, 45.0 / 180.0 * M_PI, 0);
+        m_rigidBodies.push_back(newRigidbody2);
+
+        auto newRigidbody3 = RigidBody(Vec3(0, 3, 0), Vec3(1, 0.6, 0.5), 2);
+        newRigidbody3.m_linearVelocity = Vec3(0, -0.2f, 0);
+        newRigidbody3.m_rotation = Quat(35.0 / 180.0 * M_PI, 35.0 / 180.0 * M_PI, 40.0 / 180.0 * M_PI, 0);
+        m_rigidBodies.push_back(newRigidbody3);
+
+        auto newRigidbody4 = RigidBody(Vec3(0, 4, 0), Vec3(1, 0.6, 0.5), 2);
+        newRigidbody4.m_linearVelocity = Vec3(0, -0.3f, 0);
+        newRigidbody4.m_rotation = Quat(40.0 / 180.0 * M_PI, 40.0 / 180.0 * M_PI, 45.0 / 180.0 * M_PI, 0);
+        m_rigidBodies.push_back(newRigidbody4);
         break;
     }
     }
