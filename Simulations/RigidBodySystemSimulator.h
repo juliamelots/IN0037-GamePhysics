@@ -19,6 +19,8 @@ public:
 			0, 0, (size.x * size.x + size.y * size.y), 0,
 			0, 0, 0, 1) * m_mass / 12.0f;
 		m_initialInverseIntertiaTensor = initialIntertiaTensor.inverse();
+
+		restoreOldPosition = false;
 	}
 
 	Vec3 getVelocityOfPosition(Vec3 point);
@@ -28,6 +30,7 @@ public:
 
 	float m_mass;
 	Vec3 m_position;
+	Vec3 m_oldPosition;
 	Quat m_rotation;
 	Vec3 m_linearVelocity;
 	Vec3 m_angularVelocity;
@@ -36,6 +39,8 @@ public:
 	Mat4 m_initialInverseIntertiaTensor;
 	Mat4 m_scaleMatrix;
 	Mat4 m_translationMatrix;
+
+	bool restoreOldPosition;
 };
 
 class RigidBodySystemSimulator:public Simulator{
