@@ -70,6 +70,28 @@ void RigidBodySystemSimulator::notifyCaseChanged(int testCase)
 
 void RigidBodySystemSimulator::externalForcesCalculations(float timeElapsed)
 {
+    // User interaction force
+    Point2D mouseDiff;
+    mouseDiff.x = m_trackmouse.x - m_oldtrackmouse.x;
+    mouseDiff.y = m_trackmouse.y - m_oldtrackmouse.y;
+    Vec3 inputForce = Vec3();
+    if (mouseDiff.x != 0 || mouseDiff.y != 0)
+    {
+        Mat4 worldViewInv = Mat4(DUC->g_camera.GetWorldMatrix() * DUC->g_camera.GetViewMatrix());
+        worldViewInv = worldViewInv.inverse();
+        Vec3 inputView = Vec3((float)mouseDiff.x, (float)-mouseDiff.y, );
+        Vec3 inputWorld = worldViewInv.transformVectorNormal(inputView);
+        float inputScale = 0.00001f;
+        inputForce = inputWorld * inputScale;
+    
+        // Applying to all bodies
+        for (size_t i = 0; i < m_rigidBodies.size(); i++)
+            applyForceOnBody(i, m_trackmouse, inputForce);
+    }
+
+    // Gravity
+    m_externalForce = Vec3(0, -m_fGravity, 0) + inputForce;
+
 }
 
 void RigidBodySystemSimulator::simulateTimestep(float timeStep)
@@ -109,7 +131,7 @@ void RigidBodySystemSimulator::simulateTimestep(float timeStep)
     }
 
 
-    for (auto& rigidBody : m_rigidBodies)
+    for (RigidBody& rigidBody : m_rigidBodies)
     {
         // Position update
         rigidBody.m_position += timeStep * rigidBody.m_linearVelocity;
@@ -170,8 +192,8 @@ Vec3 RigidBodySystemSimulator::getAngularVelocityOfRigidBody(int i)
 void RigidBodySystemSimulator::applyForceOnBody(int i, Vec3 loc, Vec3 force)
 {
     RigidBody& rigidBody = m_rigidBodies.at(i);
-    m_externalForce += force; // TO-DO sure?
     rigidBody.m_torqueExternalForce = cross((loc - rigidBody.m_position), force);
+    // nothing added to m_externalForce because it's not applied on whole system
 }
 
 void RigidBodySystemSimulator::addRigidBody(Vec3 position, Vec3 size, int mass)
