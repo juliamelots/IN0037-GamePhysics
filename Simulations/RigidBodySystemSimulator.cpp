@@ -34,9 +34,9 @@ void RigidBodySystemSimulator::drawFrame(ID3D11DeviceContext* pd3dImmediateConte
 {
     std::mt19937 eng;
     std::uniform_real_distribution<float> randColor(0, 1);
-    for (auto rigidbody : m_rigidBodies) {
-        DUC->setUpLighting(rigidbody.m_position, 0.4 * Vec3(1, 1, 1), 100, Vec3(randColor(eng), randColor(eng), randColor(eng)));
-        Mat4 drawMat = rigidbody.getlocalToWorldMat();
+    for (RigidBody& rigidBody : m_rigidBodies) {
+        DUC->setUpLighting(rigidBody.m_position, 0.4 * Vec3(1, 1, 1), 100, Vec3(randColor(eng), randColor(eng), randColor(eng)));
+        Mat4 drawMat = rigidBody.getlocalToWorldMat();
         DUC->drawRigidBody(drawMat);
     }
 }
@@ -50,18 +50,15 @@ void RigidBodySystemSimulator::notifyCaseChanged(int testCase)
         cout << "Demo 1: A simple one-step test" << endl;
 
         removeRigidBodies();
-        auto newRigidbody = RigidBody(Vec3(0, 0, 0), Vec3(1, 0.6, 0.5), 2);
-        newRigidbody.m_rotation = Quat(0, 0, 90.0 / 180.0 * M_PI);
-        m_rigidBodies.push_back(newRigidbody);
-        m_externalForcePosition = Vec3(0.3, 0.5, 0.25);
-        m_externalForce = Vec3(1, 1, 0);
+        addRigidBody(Vec3(), Vec3(1.0, 0.6, 0.5), 2.0);
+        setOrientationOf(0, Quat(0.0, 0.0, 0.5 * M_PI));
+        applyForceOnBody(0, Vec3(0.3, 0.5, 0.25), Vec3(1, 1, 0));
         simulateTimestep(2);
 
-        cout << "Demo 1 results, position: " << m_rigidBodies[0].m_position << endl;
-        cout << "cm velocity: " << m_rigidBodies[0].m_linearVelocity << endl;
-        cout << "cm ang. veloctiy: " << m_rigidBodies[0].m_angularVelocity << endl;
-        cout << "cm velocity of  (0.3, 0.5, 0.25): " << m_rigidBodies[0].getVelocityOfPosition(Vec3(0.3, 0.5, 0.25)) << endl;
-        m_externalForce = Vec3();
+        cout << "Demo 1 results:\n\tPosition: " << m_rigidBodies[0].m_position << endl;
+        cout << "\tCM Linear velocity: " << m_rigidBodies[0].m_linearVelocity << endl;
+        cout << "\tCM Angular veloctiy: " << m_rigidBodies[0].m_angularVelocity << endl;
+        cout << "\tCM World velocity of  (0.3, 0.5, 0.25): " << m_rigidBodies[0].getVelocityOfPosition(Vec3(0.3, 0.5, 0.25)) << endl;
         break;
     }
     case 1:
@@ -69,56 +66,45 @@ void RigidBodySystemSimulator::notifyCaseChanged(int testCase)
         cout << "Demo 2: Simple single-body simulation" << endl;
 
         removeRigidBodies();
-        std::mt19937 eng(time(nullptr));
-        std::uniform_real_distribution<float> randSpeed(-0.5f, 0.5f);
-        std::uniform_real_distribution<float> randPos(-3.0f, 3.0f);
-        std::uniform_real_distribution<float> randSize(0.1f, 0.5f);
-        auto newRigidbody = RigidBody(Vec3(randPos(eng), randPos(eng), randPos(eng)), Vec3(randSize(eng), randSize(eng), randSize(eng)), 2);
-        newRigidbody.m_rotation = Quat(0, 0, 90 / 180 * M_PI);
-        m_rigidBodies.push_back(newRigidbody);
-        m_externalForcePosition = Vec3(0.3, 0.5, 0.25);
-        m_externalForce = Vec3(0.5, 0.5, 0);
+        addRigidBody(Vec3(), Vec3(1.0, 0.6, 0.5), 2.0);
+        setOrientationOf(0, Quat(0.0, 0.0, 0.5 * M_PI));
+        applyForceOnBody(0, Vec3(0.3, 0.5, 0.25), Vec3(1, 1, 0));
         break;
     }
     case 2:
     {
         cout << "Demo 3: Simple collision simulation" << endl;
-        removeRigidBodies();
-        auto newRigidbody = RigidBody(Vec3(0, 0.5, 0), Vec3(1, 0.6, 0.5), 2);
-        newRigidbody.m_rotation = Quat(0, 0, 0);
-        newRigidbody.m_linearVelocity = Vec3(0, 0.1f, 0);
-        m_rigidBodies.push_back(newRigidbody);
 
-        auto newRigidbody2 = RigidBody(Vec3(0, 2, 0), Vec3(1, 0.6, 0.5), 2);
-        newRigidbody2.m_linearVelocity = Vec3(0, -0.1f, 0);
-        newRigidbody2.m_rotation = Quat(30.0 / 180.0 * M_PI, 30.0 / 180.0 * M_PI, 45.0 / 180.0 * M_PI, 0);
-        m_rigidBodies.push_back(newRigidbody2);
+        removeRigidBodies();
+        addRigidBody(Vec3(0.0, 0.5, 0.0), Vec3(1.0, 0.6, 0.5), 2.0);
+        setOrientationOf(0, Quat(0.0, 0.0, 0.0));
+        setVelocityOf(0, Vec3(0.0, 1.0, 0.0));
+
+        addRigidBody(Vec3(0.0, 2.0, 0.0), Vec3(1.0, 0.6, 0.5), 2.0);
+        setOrientationOf(1, Quat(30.0 / 180.0 * M_PI, 30.0 / 180.0 * M_PI, 45.0 / 180.0 * M_PI, 0));
+        setVelocityOf(1, Vec3(0.0, -1.0, 0.0));
         break;
     }
     case 3:
     {
         cout << "Demo 4: Complex simulation" << endl;
+
         removeRigidBodies();
+        addRigidBody(Vec3(0.0, 0.5, 0.0), Vec3(1.0, 0.6, 0.5), 2.0);
+        setOrientationOf(0, Quat(0.0, 0.0, 0.0));
+        setVelocityOf(0, Vec3(0.0, 0.1f, 0.0));
 
-        auto newRigidbody = RigidBody(Vec3(0, 0.5, 0), Vec3(1, 0.6, 0.5), 2);
-        newRigidbody.m_rotation = Quat(0, 0, 0);
-        newRigidbody.m_linearVelocity = Vec3(0, 0.1f, 0);
-        m_rigidBodies.push_back(newRigidbody);
+        addRigidBody(Vec3(0.0, 2.0, 0.0), Vec3(1.0, 0.6, 0.5), 2.0);
+        setOrientationOf(1, Quat(30.0 / 180.0 * M_PI, 30.0 / 180.0 * M_PI, 45.0 / 180.0 * M_PI, 0));
+        setVelocityOf(1, Vec3(0.0, -0.1f, 0.0));
 
-        auto newRigidbody2 = RigidBody(Vec3(0, 2, 0), Vec3(1, 0.6, 0.5), 2);
-        newRigidbody2.m_linearVelocity = Vec3(0, -0.1f, 0);
-        newRigidbody2.m_rotation = Quat(30.0 / 180.0 * M_PI, 30.0 / 180.0 * M_PI, 45.0 / 180.0 * M_PI, 0);
-        m_rigidBodies.push_back(newRigidbody2);
+        addRigidBody(Vec3(0.0, 3.0, 0.0), Vec3(1.0, 0.6, 0.5), 2.0);
+        setOrientationOf(2, Quat(35.0 / 180.0 * M_PI, 35.0 / 180.0 * M_PI, 40.0 / 180.0 * M_PI, 0));
+        setVelocityOf(2, Vec3(0.0, -0.2f, 0.0));
 
-        auto newRigidbody3 = RigidBody(Vec3(0, 3, 0), Vec3(1, 0.6, 0.5), 2);
-        newRigidbody3.m_linearVelocity = Vec3(0, -0.2f, 0);
-        newRigidbody3.m_rotation = Quat(35.0 / 180.0 * M_PI, 35.0 / 180.0 * M_PI, 40.0 / 180.0 * M_PI, 0);
-        m_rigidBodies.push_back(newRigidbody3);
-
-        auto newRigidbody4 = RigidBody(Vec3(0, 4, 0), Vec3(1, 0.6, 0.5), 2);
-        newRigidbody4.m_linearVelocity = Vec3(0, -0.3f, 0);
-        newRigidbody4.m_rotation = Quat(40.0 / 180.0 * M_PI, 40.0 / 180.0 * M_PI, 45.0 / 180.0 * M_PI, 0);
-        m_rigidBodies.push_back(newRigidbody4);
+        addRigidBody(Vec3(0.0, 4.0, 0.0), Vec3(1.0, 0.6, 0.5), 2.0);
+        setOrientationOf(3, Quat(40.0 / 180.0 * M_PI, 40.0 / 180.0 * M_PI, 45.0 / 180.0 * M_PI, 0));
+        setVelocityOf(3, Vec3(0.0, -0.3f, 0.0));
         break;
     }
     }
@@ -137,38 +123,34 @@ void RigidBodySystemSimulator::externalForcesCalculations(float timeElapsed)
         worldViewInv = worldViewInv.inverse();
         Vec3 inputView = Vec3((float)mouseDiff.x, (float)-mouseDiff.y, 0);
         Vec3 inputWorld = worldViewInv.transformVectorNormal(inputView);
-        float inputScale = 0.00001f;
+        float inputScale = 0.005f;
         inputForce = inputWorld * inputScale;
-    
+        cout << "teste colisão" << endl;
         // Applying to all bodies
-        for (size_t i = 0; i < m_rigidBodies.size(); i++)
-            applyForceOnBody(i, Vec3(m_trackmouse.x, m_trackmouse.y, 0), inputForce);
+        for (RigidBody& rigidBody : m_rigidBodies)
+            rigidBody.m_torqueExternalForce = cross((Vec3(m_trackmouse.x, m_trackmouse.y, 0) - rigidBody.m_position), inputForce);
     }
+    else
+        for (RigidBody& rigidBody : m_rigidBodies)
+            rigidBody.m_torqueExternalForce = Vec3();
 
     // Gravity
-    m_externalForce = Vec3(0, -m_fGravity, 0) + inputForce;
+    Vec3 gravityForce = Vec3();
+    if (m_iTestCase == 3)
+        gravityForce = Vec3(0, -m_fGravity, 0);
 
+    m_externalForce = gravityForce + inputForce;
 }
 
 void RigidBodySystemSimulator::simulateTimestep(float timeStep)
 {
-    externalForcesCalculations(timeStep);
-
-    // update position
-    for (RigidBody& rigidBody : m_rigidBodies) {
-        rigidBody.m_oldPosition = rigidBody.m_position;
-        rigidBody.m_position += timeStep * rigidBody.m_linearVelocity;
-    }
-
-    RigidBody& ground = RigidBody(Vec3(0, 0, 0), Vec3(10000000000, 0.0000001, 10000000000), 10000000000);
-
-    //collision
+    // Collision handling
     for (size_t i = 0; i < m_rigidBodies.size(); i++)
     {
         RigidBody& rigidBody_a = m_rigidBodies.at(i);
         Mat4 worldPosMat = rigidBody_a.getlocalToWorldMat();
 
-        // collision between rigid bodies
+        // Collision between rigid bodies
         for (size_t j = 0; j < m_rigidBodies.size(); j++)
         {
             if (j == i) continue;
@@ -199,33 +181,34 @@ void RigidBodySystemSimulator::simulateTimestep(float timeStep)
             }
         }
 
-        CollisionInfo collision = checkCollisionSAT(ground.getlocalToWorldMat(), rigidBody_a.getlocalToWorldMat());
+        CollisionInfo collision = checkCollisionSAT(worldPosMat, m_ground.getlocalToWorldMat());
         if (collision.isValid)
         {
             Vec3 x_a = collision.collisionPointWorld - rigidBody_a.m_position;
-            Vec3 x_b = collision.collisionPointWorld - ground.m_position;
-            Vec3 v_rel = rigidBody_a.getVelocityOfPosition(x_a); // the velocity of the ground collision point is (0, 0, 0)
+            Vec3 x_b = collision.collisionPointWorld - Vec3(0.0, -1.0, 0.0);
+            Vec3 v_rel = rigidBody_a.getVelocityOfPosition(x_a); // the velocity of the m_ground collision point is (0, 0, 0)
             // cout << collision.normalWorld << endl;
             if (dot(v_rel, collision.normalWorld) < 0) {
                 float impulse = -(1 + m_fCoefRestitution) * dot(v_rel, collision.normalWorld) /
                     (1 / rigidBody_a.m_mass + dot(
-                        cross(rigidBody_a.getInverseIntertiaTensor().transformVector(cross(x_a, collision.normalWorld)), x_a)
+                        cross(rigidBody_a.getInverseIntertiaTensor().transformVector(cross(x_a, collision.normalWorld)), x_a) /*+
+                        cross(m_ground.getInverseIntertiaTensor().transformVector(cross(x_b, collision.normalWorld)), x_b)*/
                         , collision.normalWorld));
-                cout << "before velocity" << rigidBody_a.m_linearVelocity << endl;
+                //cout << "before velocity" << rigidBody_a.m_linearVelocity << endl;
                 rigidBody_a.m_linearVelocity += (impulse / rigidBody_a.m_mass) * collision.normalWorld;
-                cout << "velocity delta" << (impulse / rigidBody_a.m_mass) * collision.normalWorld << endl; 
-                cout << "after velocity" << rigidBody_a.m_linearVelocity << endl;
+                //cout << "velocity delta" << (impulse / rigidBody_a.m_mass) * collision.normalWorld << endl; 
+                //cout << "after velocity" << rigidBody_a.m_linearVelocity << endl;
                 rigidBody_a.m_angularMomentum += cross(x_a, impulse * collision.normalWorld);
                 cout << " ground collide" << endl;
-                rigidBody_a.restoreOldPosition = true;
             }
         }
     }
 
     for (RigidBody& rigidBody : m_rigidBodies) {
-        if (rigidBody.restoreOldPosition) rigidBody.m_position = rigidBody.m_oldPosition;
+        // Position update
+        rigidBody.m_position += timeStep * rigidBody.m_linearVelocity;
         rigidBody.m_translationMatrix.initTranslation(rigidBody.m_position.x, rigidBody.m_position.y, rigidBody.m_position.z);
-
+        
         // Linear velocity update
         rigidBody.m_linearVelocity += timeStep * m_externalForce / rigidBody.m_mass;
 
@@ -238,8 +221,8 @@ void RigidBodySystemSimulator::simulateTimestep(float timeStep)
         inverseRotMat.transpose();
         Mat4 inverseInertiaTensor = inverseRotMat * rigidBody.m_initialInverseIntertiaTensor * rotMat;
         rigidBody.m_angularVelocity = inverseInertiaTensor.transformVector(rigidBody.m_angularMomentum);
-        cout << "linear velocity: " << rigidBody.m_linearVelocity << endl;
-        cout << "angular velocity: " << rigidBody.m_angularVelocity << endl;
+        //cout << "linear velocity: " << rigidBody.m_linearVelocity << endl;
+        //cout << "angular velocity: " << rigidBody.m_angularVelocity << endl;
     }
 }
 
@@ -283,8 +266,8 @@ Vec3 RigidBodySystemSimulator::getAngularVelocityOfRigidBody(int i)
 void RigidBodySystemSimulator::applyForceOnBody(int i, Vec3 loc, Vec3 force)
 {
     RigidBody& rigidBody = m_rigidBodies.at(i);
-    rigidBody.m_torqueExternalForce = cross((loc - rigidBody.m_position), force);
-    // nothing added to m_externalForce because it's not applied on whole system
+    rigidBody.m_torqueExternalForce += cross((loc - rigidBody.m_position), force);
+    m_externalForce += force;
 }
 
 void RigidBodySystemSimulator::addRigidBody(Vec3 position, Vec3 size, int mass)

@@ -4,23 +4,44 @@
 #include "collisionDetect.h"
 #define TESTCASEUSEDTORUNTEST 2
 
-
 class RigidBody {
 public:
+	RigidBody(int inf) // Ground constructor
+	{
+		m_position = Vec3(0.0, -1.0, 0.0);
+		m_mass = static_cast<float>(inf);
+		m_rotation = Quat(0.0, 0.0, 0.0);
+		m_linearVelocity = Vec3();
+		m_angularVelocity = Vec3();
+		m_angularMomentum = Vec3();
+		m_torqueExternalForce = Vec3();
+		Mat4 initialIntertiaTensor = Mat4(
+			1, 0, 0, 0,
+			0, 1, 0, 0,
+			0, 0, 1, 0,
+			0, 0, 0, 1) * inf;
+		m_initialInverseIntertiaTensor = initialIntertiaTensor.inverse();
+		m_scaleMatrix.initScaling(inf, 0.0001, inf);
+		m_translationMatrix.initTranslation(m_position.x, m_position.y, m_position.z);
+	};
+
 	RigidBody(Vec3 position, Vec3 size, int mass)
 	{
-		m_position = position;
 		m_mass = static_cast<float>(mass);
-		m_scaleMatrix.initScaling(size.x, size.y, size.z);
-		m_translationMatrix.initTranslation(m_position.x, m_position.y, m_position.z);
+		m_position = position;
+		m_rotation = Quat(0.0, 0.0, 0.0);
+		m_linearVelocity = Vec3();
+		m_angularVelocity = Vec3();
+		m_angularMomentum = Vec3();
+		m_torqueExternalForce = Vec3();
 		Mat4 initialIntertiaTensor = Mat4(
 			(size.y * size.y + size.z * size.z), 0, 0, 0,
 			0, (size.x * size.x + size.z * size.z), 0, 0,
 			0, 0, (size.x * size.x + size.y * size.y), 0,
 			0, 0, 0, 1) * m_mass / 12.0f;
 		m_initialInverseIntertiaTensor = initialIntertiaTensor.inverse();
-
-		restoreOldPosition = false;
+		m_scaleMatrix.initScaling(size.x, size.y, size.z);
+		m_translationMatrix.initTranslation(m_position.x, m_position.y, m_position.z);
 	}
 
 	Vec3 getVelocityOfPosition(Vec3 point);
@@ -30,7 +51,6 @@ public:
 
 	float m_mass;
 	Vec3 m_position;
-	Vec3 m_oldPosition;
 	Quat m_rotation;
 	Vec3 m_linearVelocity;
 	Vec3 m_angularVelocity;
@@ -39,8 +59,6 @@ public:
 	Mat4 m_initialInverseIntertiaTensor;
 	Mat4 m_scaleMatrix;
 	Mat4 m_translationMatrix;
-
-	bool restoreOldPosition;
 };
 
 class RigidBodySystemSimulator:public Simulator{
@@ -77,6 +95,7 @@ private:
 	vector<RigidBody> m_rigidBodies;
 	float m_fCoefRestitution;
 	float m_fGravity;
+	RigidBody m_ground = RigidBody(100);
 
 	// UI Attributes
 	Point2D m_mouse;
