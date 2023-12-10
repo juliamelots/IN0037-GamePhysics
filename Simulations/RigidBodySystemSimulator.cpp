@@ -63,12 +63,13 @@ void RigidBodySystemSimulator::notifyCaseChanged(int testCase)
     }
     case 1:
     {
-        cout << "Demo 2: Simple single-body simulation" << endl;
+        cout << "Demo 3: Simple collision simulation" << endl;
 
         removeRigidBodies();
         addRigidBody(Vec3(), Vec3(1.0, 0.6, 0.5), 2.0);
         setOrientationOf(0, Quat(0.0, 0.0, 0.5 * M_PI));
         applyForceOnBody(0, Vec3(0.3, 0.5, 0.25), Vec3(1, 1, 0));
+        simulateTimestep(0.01);
         break;
     }
     case 2:
@@ -125,10 +126,8 @@ void RigidBodySystemSimulator::externalForcesCalculations(float timeElapsed)
         Vec3 inputWorld = worldViewInv.transformVectorNormal(inputView);
         float inputScale = 0.005f;
         inputForce = inputWorld * inputScale;
-        cout << "teste colisão" << endl;
-        // Applying to all bodies
         for (RigidBody& rigidBody : m_rigidBodies)
-            rigidBody.m_torqueExternalForce = cross((Vec3(m_trackmouse.x, m_trackmouse.y, 0) - rigidBody.m_position), inputForce);
+            rigidBody.m_torqueExternalForce = cross((Vec3(m_trackmouse.x, m_trackmouse.y, 0) * inputScale - rigidBody.m_position), inputForce);
     }
     else
         for (RigidBody& rigidBody : m_rigidBodies)
@@ -169,18 +168,17 @@ void RigidBodySystemSimulator::simulateTimestep(float timeStep)
                             cross(rigidBody_a.getInverseIntertiaTensor().transformVector(cross(x_a, collision.normalWorld)), x_a) +
                             cross(rigidBody_b.getInverseIntertiaTensor().transformVector(cross(x_b, collision.normalWorld)), x_b)
                             , collision.normalWorld));
-                    cout << "before velocity" << rigidBody_a.m_linearVelocity;
+                    //cout << "before velocity" << rigidBody_a.m_linearVelocity;
                     rigidBody_a.m_linearVelocity += (impulse / rigidBody_a.m_mass) * collision.normalWorld;
-                    cout << "after velocity" << rigidBody_a.m_linearVelocity;
+                    //cout << "after velocity" << rigidBody_a.m_linearVelocity;
                     rigidBody_b.m_linearVelocity -= (impulse / rigidBody_b.m_mass) * collision.normalWorld;
-                    cout << endl;
                     rigidBody_a.m_angularMomentum += cross(x_a, impulse * collision.normalWorld);
                     rigidBody_b.m_angularMomentum -= cross(x_b, impulse * collision.normalWorld);
-                    cout << "body collide" << endl;
                 }
             }
         }
 
+        // Ground collision
         CollisionInfo collision = checkCollisionSAT(worldPosMat, m_ground.getlocalToWorldMat());
         if (collision.isValid)
         {
@@ -188,18 +186,16 @@ void RigidBodySystemSimulator::simulateTimestep(float timeStep)
             Vec3 x_b = collision.collisionPointWorld - Vec3(0.0, -1.0, 0.0);
             Vec3 v_rel = rigidBody_a.getVelocityOfPosition(x_a); // the velocity of the m_ground collision point is (0, 0, 0)
             // cout << collision.normalWorld << endl;
-            if (dot(v_rel, collision.normalWorld) < 0) {
+            if (dot(v_rel, collision.normalWorld) < 0)
+            {
                 float impulse = -(1 + m_fCoefRestitution) * dot(v_rel, collision.normalWorld) /
                     (1 / rigidBody_a.m_mass + dot(
-                        cross(rigidBody_a.getInverseIntertiaTensor().transformVector(cross(x_a, collision.normalWorld)), x_a) /*+
-                        cross(m_ground.getInverseIntertiaTensor().transformVector(cross(x_b, collision.normalWorld)), x_b)*/
+                        cross(rigidBody_a.getInverseIntertiaTensor().transformVector(cross(x_a, collision.normalWorld)), x_a)
                         , collision.normalWorld));
                 //cout << "before velocity" << rigidBody_a.m_linearVelocity << endl;
                 rigidBody_a.m_linearVelocity += (impulse / rigidBody_a.m_mass) * collision.normalWorld;
-                //cout << "velocity delta" << (impulse / rigidBody_a.m_mass) * collision.normalWorld << endl; 
                 //cout << "after velocity" << rigidBody_a.m_linearVelocity << endl;
                 rigidBody_a.m_angularMomentum += cross(x_a, impulse * collision.normalWorld);
-                cout << " ground collide" << endl;
             }
         }
     }

@@ -21,7 +21,7 @@ public:
 			0, 0, 1, 0,
 			0, 0, 0, 1) * inf;
 		m_initialInverseIntertiaTensor = initialIntertiaTensor.inverse();
-		m_scaleMatrix.initScaling(inf, 0.0001, inf);
+		m_scaleMatrix.initScaling(inf, 0.001, inf);
 		m_translationMatrix.initTranslation(m_position.x, m_position.y, m_position.z);
 	};
 

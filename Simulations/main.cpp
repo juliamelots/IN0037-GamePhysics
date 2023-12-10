@@ -64,7 +64,10 @@ void initTweakBar(){
 	// Run mode, step by step, control by space key
 	TwAddVarRW(g_pDUC->g_pTweakBar, "RunStep", TW_TYPE_BOOLCPP, &g_bSimulateByStep, "");
 	TwAddVarRW(g_pDUC->g_pTweakBar, "Draw Simulation",  TW_TYPE_BOOLCPP, &g_bDraw, "");
-	TwAddVarRW(g_pDUC->g_pTweakBar, "Timestep", TW_TYPE_FLOAT, &g_fTimestep, "step=0.0001 min=0.0001");
+#ifdef RIGID_BODY_SYSTEM
+	if (g_iTestCase == 2 || g_iTestCase == 3)
+		TwAddVarRW(g_pDUC->g_pTweakBar, "Timestep", TW_TYPE_FLOAT, &g_fTimestep, "step=0.0001 min=0.0001");
+#endif
 #ifdef ADAPTIVESTEP
 	TwAddVarRW(g_pDUC->g_pTweakBar, "Time Factor", TW_TYPE_FLOAT, &g_fTimeFactor, "step=0.01   min=0.01");
 #endif
@@ -248,6 +251,26 @@ void CALLBACK OnFrameMove( double dTime, float fElapsedTime, void* pUserContext 
 			g_pDUC->g_pTweakBar = nullptr;
 		}
 		initTweakBar();
+#ifdef RIGID_BODY_SYSTEM
+		switch (g_iTestCase) {
+		case 0:
+		{
+			g_fTimestep = 2.0;
+			break;
+		}
+		case 1:
+		{
+			g_fTimestep = 0.01;
+			break;
+		}
+		default:
+		{
+			g_fTimestep = 0.001;
+			TwAddVarRW(g_pDUC->g_pTweakBar, "Timestep", TW_TYPE_FLOAT, &g_fTimestep, "step=0.0001 min=0.0001");
+			break;
+		}
+		}
+#endif
 		g_pSimulator->notifyCaseChanged(g_iTestCase);
 		g_pSimulator->initUI(g_pDUC);
 		g_iPreTestCase = g_iTestCase;
