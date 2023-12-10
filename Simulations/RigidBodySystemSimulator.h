@@ -162,12 +162,30 @@ void RigidBodySystemSimulator::notifyCaseChanged(int testCase)
 		break;
 	case 1:
 		cout << "Demo 2: simple single-body simulation\n";
+		addRigidBody(Vec3(), Vec3(1, 0.6, 0.5), 2);
+		//setOrientationOf(0, Quat(Vec3(0, 0, 1), 0.5 * M_PI));
+		simulateTimestep(0.01);
 		break;
 	case 2:
 		cout << "Demo 3: two-rigid-body collision simulation\n";
+
+		addRigidBody(Vec3(0, 0, 0), Vec3(2, 2, 2), 2);
+		setOrientationOf(0, Quat());
+		applyForceOnBody(0, Vec3(), Vec3(0.1, 0, 0));
+
+		addRigidBody(Vec3(10, 0, 0), Vec3(2, 2, 2), 2);
+		setOrientationOf(1, Quat());
+		applyForceOnBody(1, Vec3(), Vec3(-0.1, 0, 0));
+
+		simulateTimestep(0.01);
+		cout << "Linear velocity 1: " << getLinearVelocityOfRigidBody(0) << "\n";
+		cout << "Linear velocity 2: " << getLinearVelocityOfRigidBody(1) << "\n";
 		break;
 	case 3:
 		cout << "Demo 4: complex simulation\n";
+		addRigidBody(Vec3(0, 0, 0), Vec3(10000, 10000, 0.5), INT_MAX);
+		setOrientationOf(0, Quat(Vec3(0, 0, 1), 0.5 * M_PI));
+		simulateTimestep(0.01);
 		break;
 	default:
 		break;
