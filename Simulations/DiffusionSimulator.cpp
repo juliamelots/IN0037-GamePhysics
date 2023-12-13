@@ -121,9 +121,7 @@ void DiffusionSimulator::diffuseTemperatureImplicit(float timeStep) {
 		int space_i = get<0>(values);
 		int space_j = get<1>(values);
 		int space_k = get<2>(values);
-		if ((m_iTestCase < 2 && (space_i == 0 || space_i == nx - 1 || space_j == 0 || space_j == ny - 1)) ||
-			(m_iTestCase >= 2 && (space_i == 0 || space_i == nx - 1 || space_j == 0 || space_j == ny - 1 ||
-				space_k == 0 || space_k == nz - 1))){
+		if (isInBorder(space_i, space_j, space_k)){
 			//TODO: borders of the simulation: should set to zero
 		}
 		else {
@@ -157,6 +155,20 @@ void DiffusionSimulator::diffuseTemperatureImplicit(float timeStep) {
 	// preconditioners: 0 off, 1 diagonal, 2 incomplete cholesky
 	solver.solve(A, b, x, ret_pcg_residual, ret_pcg_iterations, 0);
 
+	for (int i = 0; i < N; i++) {
+		tuple<int, int, int> values = get_space_index(i);
+		int space_i = get<0>(values);
+		int space_j = get<1>(values);
+		int space_k = get<2>(values);
+		//TODO: add 3D
+		if (isInBorder(space_i, space_j, space_k)) {
+			T.t_space[space_i][space_j] = 0;
+		}
+		else {
+			T.t_space[space_i][space_j] = x[i];
+		}
+	}
+
 	// Final step is to extract the grid temperatures from the solution vector x
 	// to be implemented
 }
@@ -172,7 +184,6 @@ std::tuple<int,int,int> DiffusionSimulator::get_space_index(int a_index)
 	int nx{ T.nx }, ny{ T.ny };
 	return m_iTestCase < 2 ? make_tuple( a_index / nx, a_index % nx, 0 ) : make_tuple(a_index / (nx * ny), a_index %(nx *ny) / ny, a_index % (nx * ny) % ny);
 }
-
 
 
 void DiffusionSimulator::simulateTimestep(float timeStep)
@@ -215,4 +226,11 @@ void DiffusionSimulator::onMouse(int x, int y)
 	m_oldtrackmouse.y = y;
 	m_trackmouse.x = x;
 	m_trackmouse.y = y;
+}
+
+bool DiffusionSimulator::isInBorder(int space_i, int space_j, int space_k)
+{
+	return (m_iTestCase < 2 && (space_i == 0 || space_i == T.nx - 1 || space_j == 0 || space_j == T.ny - 1)) ||
+		(m_iTestCase >= 2 && (space_i == 0 || space_i == T.nx - 1 || space_j == 0 || space_j == T.ny - 1 ||
+			space_k == 0 || space_k == T.nz - 1));
 }

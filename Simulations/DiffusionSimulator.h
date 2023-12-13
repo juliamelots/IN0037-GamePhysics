@@ -37,7 +37,8 @@ public:
 	void diffuseTemperatureExplicit(float timeStep);
 	void diffuseTemperatureImplicit(float timeStep);
 	int get_A_index(int i, int j, int k);
-	std::tuple<int,int,int> get_space_index(int a_index);
+	std::tuple<int, int, int> get_space_index(int a_index);
+	bool isInBorder(int space_i, int space_j, int space_k);
 
 private:
 	// Attributes
