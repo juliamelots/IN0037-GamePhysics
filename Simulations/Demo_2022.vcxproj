@@ -225,6 +225,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="DiffusionSimulator.cpp" />
+    <ClCompile Include="main.cpp" />
     <ClCompile Include="TemplateSimulator.cpp" />
     <ClCompile Include="util\FFmpeg.cpp" />
     <ClCompile Include="util\util.cpp" />
@@ -240,6 +241,7 @@
     <ClInclude Include="util\timer.h" />
     <ClInclude Include="util\util.h" />
     <ClInclude Include="util\vectorbase.h" />
+    <ClInclude Include="vectorbase.h" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="effect.fx">

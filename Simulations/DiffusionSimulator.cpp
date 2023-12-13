@@ -12,21 +12,25 @@ DiffusionSimulator::DiffusionSimulator()
 	// rest to be implemented
 }
 
-const char * DiffusionSimulator::getTestCasesStr(){
-	return "Explicit_solver, Implicit_solver";
+const char* DiffusionSimulator::getTestCasesStr() {
+	return "Explicit_solver, Implicit_solver, Explicit_solver_3D, Implicit_solver_3D";
 }
 
-void DiffusionSimulator::reset(){
-		m_mouse.x = m_mouse.y = 0;
-		m_trackmouse.x = m_trackmouse.y = 0;
-		m_oldtrackmouse.x = m_oldtrackmouse.y = 0;
+void DiffusionSimulator::reset() {
+	m_mouse.x = m_mouse.y = 0;
+	m_trackmouse.x = m_trackmouse.y = 0;
+	m_oldtrackmouse.x = m_oldtrackmouse.y = 0;
 
 }
 
-void DiffusionSimulator::initUI(DrawingUtilitiesClass * DUC)
+void DiffusionSimulator::initUI(DrawingUtilitiesClass* DUC)
 {
 	this->DUC = DUC;
 	// to be implemented
+	T.ny = 16;
+	T.nx = 16;
+	m_alpha = 0.1f;
+	T.x_diff_squared = 0.1f * 0.1f;
 }
 
 void DiffusionSimulator::notifyCaseChanged(int testCase)
@@ -34,41 +38,109 @@ void DiffusionSimulator::notifyCaseChanged(int testCase)
 	m_iTestCase = testCase;
 	m_vfMovableObjectPos = Vec3(0, 0, 0);
 	m_vfRotate = Vec3(0, 0, 0);
+	T.t_space.clear();
+	for (int i = 0; i < T.nx; i++) {
+		std::vector<float> t_row;
+		float initial_value = 100;
+		for (int j = 0; j < T.ny; j++) {
+			for (int k = 0; k < T.nz; k++) {
+				if (m_iTestCase < 2)
+					t_row.push_back((j == 0 || i == 0 || j == T.ny - 1 || i == T.nx - 1) ? 0 : initial_value);
+				else
+					t_row.push_back((j == 0 || i == 0 || j == T.ny - 1 || i == T.nx - 1 ||
+						k == 0 || k == T.nz - 1) ? 0 : initial_value);
+			}
+		}
+		T.t_space.push_back(t_row);
+	}
 	//
 	// to be implemented
 	//
 	switch (m_iTestCase)
 	{
-	case 0:
+	case 0: {
+		T.nz = 1;
 		cout << "Explicit solver!\n";
 		break;
-	case 1:
+	}
+	case 1: {
+		T.nz = 1;
 		cout << "Implicit solver!\n";
 		break;
-	default:
+	}
+	case 2: {
+		T.nz = T.ny;
+		cout << "Implicit solver!\n";
+		break;
+	}
+	case 3: {
+		T.nz = T.ny;
+		cout << "Implicit solver!\n";
+		break;
+	}
+	default: {
 		cout << "Empty Test!\n";
 		break;
 	}
+	}
 }
 
-void DiffusionSimulator::diffuseTemperatureExplicit() {
-// to be implemented
+void DiffusionSimulator::diffuseTemperatureExplicit(float timeStep) {
+	std::vector<std::vector<float>> new_t_space;
+	float r{ (m_alpha * timeStep) / (T.x_diff_squared) };
+	for (int i = 0; i < T.ny; i++) {
+		std::vector<float> t_row;
+		float initial_value = 100;
+		for (int j = 0; j < T.nx; j++) {
+			t_row.push_back((j == 0 || i == 0 || j == T.ny - 1 || i == T.nx - 1) ? 0 :
+				T.t_space[i][j] + r * (T.t_space[i + 1][j] + T.t_space[i][j + 1] + T.t_space[i - 1][j]
+					+ T.t_space[i][j - 1] - 4 * T.t_space[i][j]));
+		}
+		new_t_space.push_back(t_row);
+	}
+	T.t_space = new_t_space;
 }
 
 
-void DiffusionSimulator::diffuseTemperatureImplicit() {
+
+void DiffusionSimulator::diffuseTemperatureImplicit(float timeStep) {
 	// solve A T = b
 
 	// This is just an example to show how to work with the PCG solver,
-	const int nx = 5;
-	const int ny = 5;
-	const int nz = 5;
+	int nx{ T.nx };
+	int ny{ T.ny };
+	int nz{ T.nz };
 	const int N = nx * ny * nz;
 
 	SparseMatrix<Real> A(N);
 	std::vector<Real> b(N);
 
 	// This is the part where you have to assemble the system matrix A and the right-hand side b!
+	for (int i = 0; i < N; i++) {
+		tuple<int, int, int> values = get_space_index(i);
+		int space_i = get<0>(values);
+		int space_j = get<1>(values);
+		int space_k = get<2>(values);
+		if ((m_iTestCase < 2 && (space_i == 0 || space_i == nx - 1 || space_j == 0 || space_j == ny - 1)) ||
+			(m_iTestCase >= 2 && (space_i == 0 || space_i == nx - 1 || space_j == 0 || space_j == ny - 1 ||
+				space_k == 0 || space_k == nz - 1))){
+			//TODO: borders of the simulation: should set to zero
+		}
+		else {
+			//TODO: set first element for 3D simulation
+			A.set_element(i, i, (m_iTestCase < 2) ? (-T.x_diff_squared / (m_alpha * timeStep) - 4) : (0));
+			A.set_element(i, get_A_index(space_i + 1, space_j, space_k), 1);
+			A.set_element(i, get_A_index(space_i, space_j + 1, space_k), 1);
+			A.set_element(i, get_A_index(space_i - 1, space_j, space_k), 1);
+			A.set_element(i, get_A_index(space_i, space_j - 1, space_k), 1);
+			if (m_iTestCase >= 2) {
+				A.set_element(i, get_A_index(space_i, space_j, space_k + 1), 1);
+				A.set_element(i, get_A_index(space_i, space_j, space_k - 1), 1);
+			}
+
+			b[i] = -T.x_diff_squared / (m_alpha * timeStep) * T.t_space[space_i][space_j];
+		}
+	}
 
 	// perform solve
 	Real pcg_target_residual = 1e-05;
@@ -89,6 +161,18 @@ void DiffusionSimulator::diffuseTemperatureImplicit() {
 	// to be implemented
 }
 
+int DiffusionSimulator::get_A_index(int i, int j, int k)
+{
+	int nx{ T.nx }, ny{ T.ny };
+	return m_iTestCase < 2 ? nx * i + j : (nx * ny) * i + ny * j + T.nz;
+}
+
+std::tuple<int,int,int> DiffusionSimulator::get_space_index(int a_index)
+{
+	int nx{ T.nx }, ny{ T.ny };
+	return m_iTestCase < 2 ? make_tuple( a_index / nx, a_index % nx, 0 ) : make_tuple(a_index / (nx * ny), a_index %(nx *ny) / ny, a_index % (nx * ny) % ny);
+}
+
 
 
 void DiffusionSimulator::simulateTimestep(float timeStep)
@@ -98,11 +182,11 @@ void DiffusionSimulator::simulateTimestep(float timeStep)
 	{
 	case 0:
 		// feel free to change the signature of this function
-		diffuseTemperatureExplicit();
+		diffuseTemperatureExplicit(timeStep);
 		break;
 	case 1:
 		// feel free to change the signature of this function
-		diffuseTemperatureImplicit();
+		diffuseTemperatureImplicit(timeStep);
 		break;
 	}
 }

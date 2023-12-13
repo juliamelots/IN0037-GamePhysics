@@ -5,7 +5,12 @@
 #include "vectorbase.h"
 
 class Grid {
-	// to be implemented
+public:
+	std::vector<std::vector<float>> t_space;
+	int nx;
+	int ny;
+	int nz;
+	float x_diff_squared;
 };
 
 
@@ -29,8 +34,10 @@ public:
 	void drawObjects();
 
 	// Feel free to change the signature of these functions, add arguments, etc.
-	void diffuseTemperatureExplicit();
-	void diffuseTemperatureImplicit();
+	void diffuseTemperatureExplicit(float timeStep);
+	void diffuseTemperatureImplicit(float timeStep);
+	int get_A_index(int i, int j, int k);
+	std::tuple<int,int,int> get_space_index(int a_index);
 
 private:
 	// Attributes
@@ -40,6 +47,7 @@ private:
 	Point2D m_mouse;
 	Point2D m_trackmouse;
 	Point2D m_oldtrackmouse;
+	float m_alpha;
 	Grid T;
 };
 
