@@ -9,6 +9,13 @@ DiffusionSimulator::DiffusionSimulator()
 	m_vfMovableObjectPos = Vec3();
 	m_vfMovableObjectFinalPos = Vec3();
 	m_vfRotate = Vec3();
+	m_coldColor = HSVColor(nVec3i(0,236,255));
+	m_hotColor = HSVColor(nVec3i(255, 19, 0));
+	m_alpha = 0.2f;
+	T.ny = 16;
+	T.nx = 16;
+	m_alpha = 0.1f;
+	T.x_diff_squared = 0.1f * 0.1f;
 	// rest to be implemented
 }
 
@@ -27,10 +34,7 @@ void DiffusionSimulator::initUI(DrawingUtilitiesClass* DUC)
 {
 	this->DUC = DUC;
 	// to be implemented
-	T.ny = 16;
-	T.nx = 16;
-	m_alpha = 0.1f;
-	T.x_diff_squared = 0.1f * 0.1f;
+	
 }
 
 void DiffusionSimulator::notifyCaseChanged(int testCase)
@@ -90,7 +94,6 @@ void DiffusionSimulator::diffuseTemperatureExplicit(float timeStep) {
 	float r{ (m_alpha * timeStep) / (T.x_diff_squared) };
 	for (int i = 0; i < T.ny; i++) {
 		std::vector<float> t_row;
-		float initial_value = 100;
 		for (int j = 0; j < T.nx; j++) {
 			t_row.push_back((j == 0 || i == 0 || j == T.ny - 1 || i == T.nx - 1) ? 0 :
 				T.t_space[i][j] + r * (T.t_space[i + 1][j] + T.t_space[i][j + 1] + T.t_space[i - 1][j]
@@ -122,6 +125,7 @@ void DiffusionSimulator::diffuseTemperatureImplicit(float timeStep) {
 		int space_j = get<1>(values);
 		int space_k = get<2>(values);
 		if (isInBorder(space_i, space_j, space_k)){
+			A.set_element(i, i, 1);
 			//TODO: borders of the simulation: should set to zero
 		}
 		else {
@@ -204,6 +208,23 @@ void DiffusionSimulator::simulateTimestep(float timeStep)
 
 void DiffusionSimulator::drawObjects()
 {
+	const int space_min = -5;
+	const int space_max = 5;
+	float x_diff = static_cast<float>(space_max - space_min) / static_cast<float>(T.nx);
+	float y_diff = static_cast<float>(space_max - space_min) / static_cast<float>(T.ny);
+	if (m_iTestCase < 2) {
+		for (int i = 0; i < T.nx; i++) {
+			for (int j = 0; j < T.ny; j++) {
+				float rel_temp = (T.t_space[i][j] - min_temp) / (max_temp - min_temp);
+				Vec3 color = colorLerp(rel_temp);
+				DUC->setUpLighting(color, color, 100,color);
+				DUC->drawSphere(Vec3(space_min + x_diff * i, space_min + y_diff * j, 0), Vec3(0.1,0.1,0.1));
+			}
+		}
+	}
+	else {
+		float z_diff = static_cast<float>(space_max - space_min) / static_cast<float>(T.nz);
+	}
 	// to be implemented
 	//visualization
 }
@@ -233,4 +254,92 @@ bool DiffusionSimulator::isInBorder(int space_i, int space_j, int space_k)
 	return (m_iTestCase < 2 && (space_i == 0 || space_i == T.nx - 1 || space_j == 0 || space_j == T.ny - 1)) ||
 		(m_iTestCase >= 2 && (space_i == 0 || space_i == T.nx - 1 || space_j == 0 || space_j == T.ny - 1 ||
 			space_k == 0 || space_k == T.nz - 1));
+}
+
+Vec3 DiffusionSimulator::colorLerp(float rel_t)
+{
+	float new_h = static_cast<float>(m_coldColor.hsv[0]) * (1 - rel_t) + rel_t * static_cast<float>(m_hotColor.hsv[0]);
+	HSVColor new_color = HSVColor(new_h, m_coldColor.hsv[1], m_coldColor.hsv[2]);
+	return new_color.toRGB();
+}
+
+HSVColor::HSVColor(nVec3i rgbValues)
+{
+	unsigned char rgbMin, rgbMax;
+
+	rgbMin = rgbValues[0] < rgbValues[1] ? (rgbValues[0] < rgbValues[2] ? rgbValues[0] : rgbValues[2]) : (rgbValues[1] < rgbValues[2] ? rgbValues[1] : rgbValues[2]);
+	rgbMax = rgbValues[0] > rgbValues[1] ? (rgbValues[0] > rgbValues[2] ? rgbValues[0] : rgbValues[2]) : (rgbValues[1] > rgbValues[2] ? rgbValues[1] : rgbValues[2]);
+
+	hsv[2] = rgbMax;
+	if (hsv[2] == 0)
+	{
+		hsv[0] = 0;
+		hsv[1] = 0;
+		return;
+	}
+
+	hsv[1] = 255 * long(rgbMax - rgbMin) / hsv[2];
+	if (hsv[1] == 0)
+	{
+		hsv[0] = 0;
+		return;
+	}
+
+	if (rgbMax == rgbValues[0])
+		hsv[0] = 0 + 43 * (rgbValues[1] - rgbValues[2]) / (rgbMax - rgbMin);
+	else if (rgbMax == rgbValues[1])
+		hsv[0] = 85 + 43 * (rgbValues[2] - rgbValues[0]) / (rgbMax - rgbMin);
+	else
+		hsv[0] = 171 + 43 * (rgbValues[0] - rgbValues[1]) / (rgbMax - rgbMin);
+}
+
+HSVColor::HSVColor(float h, float s, float v)
+{
+	hsv[0] = h;
+	hsv[1] = s;
+	hsv[2] = v;
+}
+
+Vec3 HSVColor::toRGB()
+{
+	Vec3 rgb;
+	unsigned char region, remainder, p, q, t;
+
+	if (hsv[1] == 0)
+	{
+		rgb[0] = hsv[2];
+		rgb[1] = hsv[2];
+		rgb[2] = hsv[2];
+		return rgb / 255.0;
+	}
+
+	region = hsv[0] / 43;
+	remainder = (hsv[0] - (region * 43)) * 6;
+
+	p = (hsv[2] * (255 - hsv[1])) >> 8;
+	q = (hsv[2] * (255 - ((hsv[1] * remainder) >> 8))) >> 8;
+	t = (hsv[2] * (255 - ((hsv[1] * (255 - remainder)) >> 8))) >> 8;
+
+	switch (region)
+	{
+	case 0:
+		rgb[0] = hsv[2]; rgb[1] = t; rgb[2] = p;
+		break;
+	case 1:
+		rgb[0] = q; rgb[1] = hsv[2]; rgb[2] = p;
+		break;
+	case 2:
+		rgb[0] = p; rgb[1] = hsv[2]; rgb[2] = t;
+		break;
+	case 3:
+		rgb[0] = p; rgb[1] = q; rgb[2] = hsv[2];
+		break;
+	case 4:
+		rgb[0] = t; rgb[1] = p; rgb[2] = hsv[2];
+		break;
+	default:
+		rgb[0] = hsv[2]; rgb[1] = p; rgb[2] = q;
+		break;
+	}
+	return rgb / 255.0;
 }

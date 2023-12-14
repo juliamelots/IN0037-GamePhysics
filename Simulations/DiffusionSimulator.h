@@ -13,6 +13,15 @@ public:
 	float x_diff_squared;
 };
 
+class HSVColor {
+public:
+	HSVColor()=default;
+	explicit HSVColor(nVec3i rgbValues);
+	explicit HSVColor(float h, float s, float v);
+	nVec3i hsv;
+	Vec3 toRGB();
+};
+
 
 
 class DiffusionSimulator:public Simulator{
@@ -39,6 +48,7 @@ public:
 	int get_A_index(int i, int j, int k);
 	std::tuple<int, int, int> get_space_index(int a_index);
 	bool isInBorder(int space_i, int space_j, int space_k);
+	Vec3 colorLerp(float rel_t);
 
 private:
 	// Attributes
@@ -50,6 +60,10 @@ private:
 	Point2D m_oldtrackmouse;
 	float m_alpha;
 	Grid T;
+	HSVColor m_coldColor;
+	HSVColor m_hotColor;
+	float min_temp = 0;
+	float max_temp = 250;
 };
 
 #endif
