@@ -11,11 +11,11 @@ DiffusionSimulator::DiffusionSimulator()
 	m_vfRotate = Vec3();
 	m_coldColor = HSVColor(nVec3i(0,236,255));
 	m_hotColor = HSVColor(nVec3i(255, 19, 0));
-	m_alpha = 0.2f;
 	T.ny = 16;
 	T.nx = 16;
-	m_alpha = 0.1f;
-	T.x_diff_squared = 0.1f * 0.1f;
+	T.nz = 1;
+	m_alpha = 0.001f;
+	T.x_diff_squared = 0.01f * 0.01f;
 	// rest to be implemented
 }
 
@@ -45,11 +45,11 @@ void DiffusionSimulator::notifyCaseChanged(int testCase)
 	T.t_space.clear();
 	for (int i = 0; i < T.nx; i++) {
 		std::vector<float> t_row;
-		float initial_value = 100;
+		float initial_value = 500;
 		for (int j = 0; j < T.ny; j++) {
 			for (int k = 0; k < T.nz; k++) {
 				if (m_iTestCase < 2)
-					t_row.push_back((j == 0 || i == 0 || j == T.ny - 1 || i == T.nx - 1) ? 0 : initial_value);
+					t_row.push_back((j == 0 || i == 0 || j > 8 || i > 8) ? 0 : initial_value);
 				else
 					t_row.push_back((j == 0 || i == 0 || j == T.ny - 1 || i == T.nx - 1 ||
 						k == 0 || k == T.nz - 1) ? 0 : initial_value);
@@ -95,13 +95,15 @@ void DiffusionSimulator::diffuseTemperatureExplicit(float timeStep) {
 	for (int i = 0; i < T.ny; i++) {
 		std::vector<float> t_row;
 		for (int j = 0; j < T.nx; j++) {
-			t_row.push_back((j == 0 || i == 0 || j == T.ny - 1 || i == T.nx - 1) ? 0 :
-				T.t_space[i][j] + r * (T.t_space[i + 1][j] + T.t_space[i][j + 1] + T.t_space[i - 1][j]
+			if ((j == 0 || i == 0 || j == T.nx - 1 || i == T.ny - 1)) t_row.push_back(0);
+			else 
+				t_row.push_back( T.t_space[i][j] + r * (T.t_space[i + 1][j] + T.t_space[i][j + 1] + T.t_space[i - 1][j]
 					+ T.t_space[i][j - 1] - 4 * T.t_space[i][j]));
 		}
 		new_t_space.push_back(t_row);
 	}
 	T.t_space = new_t_space;
+
 }
 
 
@@ -208,8 +210,8 @@ void DiffusionSimulator::simulateTimestep(float timeStep)
 
 void DiffusionSimulator::drawObjects()
 {
-	const int space_min = -5;
-	const int space_max = 5;
+	const int space_min = -1;
+	const int space_max = 1;
 	float x_diff = static_cast<float>(space_max - space_min) / static_cast<float>(T.nx);
 	float y_diff = static_cast<float>(space_max - space_min) / static_cast<float>(T.ny);
 	if (m_iTestCase < 2) {
@@ -217,7 +219,7 @@ void DiffusionSimulator::drawObjects()
 			for (int j = 0; j < T.ny; j++) {
 				float rel_temp = (T.t_space[i][j] - min_temp) / (max_temp - min_temp);
 				Vec3 color = colorLerp(rel_temp);
-				DUC->setUpLighting(color, color, 100,color);
+				DUC->setUpLighting(Vec3(), color, 20,color);
 				DUC->drawSphere(Vec3(space_min + x_diff * i, space_min + y_diff * j, 0), Vec3(0.1,0.1,0.1));
 			}
 		}

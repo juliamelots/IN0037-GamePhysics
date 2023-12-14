@@ -63,7 +63,7 @@ private:
 	HSVColor m_coldColor;
 	HSVColor m_hotColor;
 	float min_temp = 0;
-	float max_temp = 250;
+	float max_temp = 500;
 };
 
 #endif
