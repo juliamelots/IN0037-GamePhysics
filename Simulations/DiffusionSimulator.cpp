@@ -2,9 +2,18 @@
 #include "pcgsolver.h"
 using namespace std;
 
-Grid::Grid() {
+//--------------------------------------------------------------------------------------
+// Initialize MxN grid with border/boundary cells
+//--------------------------------------------------------------------------------------
+Grid::Grid(int rows, int columns)
+{
+	m = rows;
+	n = columns;
+	std::vector<float> values = new std::vector<float>(m * n);
+	for (int i = 0; i < m; i++)
+		for (int j = 0; j < n; j++)
+			set(i, j) = 0.0;
 }
-
 
 DiffusionSimulator::DiffusionSimulator()
 {
@@ -12,29 +21,47 @@ DiffusionSimulator::DiffusionSimulator()
 	m_vfMovableObjectPos = Vec3();
 	m_vfMovableObjectFinalPos = Vec3();
 	m_vfRotate = Vec3();
-	// to be implemented
+	// TO-DO initialize with minimum values
+	m_iM = 0;
+	m_iN = 0;
+	m_fAlpha = 0.0;
+	m_fDeltaSpace = 0.0;
 }
 
-const char * DiffusionSimulator::getTestCasesStr(){
+const char * DiffusionSimulator::getTestCasesStr()
+{
 	return "Explicit_solver, Implicit_solver";
 }
 
-void DiffusionSimulator::reset(){
-		m_mouse.x = m_mouse.y = 0;
-		m_trackmouse.x = m_trackmouse.y = 0;
-		m_oldtrackmouse.x = m_oldtrackmouse.y = 0;
-
+void DiffusionSimulator::reset()
+{
+	m_mouse.x = m_mouse.y = 0;
+	m_trackmouse.x = m_trackmouse.y = 0;
+	m_oldtrackmouse.x = m_oldtrackmouse.y = 0;
 }
 
 void DiffusionSimulator::initUI(DrawingUtilitiesClass * DUC)
 {
 	this->DUC = DUC;
-	// to be implemented
+	// TO-DO what should be the minimum values?
+	TwAddVarRW(DUC->g_pTweakBar, "M", TW_TYPE_INT32, &m_iM, "min=16 step=1");
+	TwAddVarRW(DUC->g_pTweakBar, "N", TW_TYPE_INT32, &m_iN, "min=16 step=1");
+	TwAddVarRW(DUC->g_pTweakBar, "Diffusion Coeficient", TW_TYPE_FLOAT, &m_fAlpha, "min=0.01 step=0.01");
+	TwAddVarRW(DUC->g_pTweakBar, "SpaceStep", TW_TYPE_FLOAT, &m_fDeltaSpace, "min=0.001 step=0.001");
+	switch (m_iTestCase)
+	{
+	case 0:
+		break;
+	case 1:
+		break;
+	default: break;
+	}
 }
 
 void DiffusionSimulator::notifyCaseChanged(int testCase)
 {
 	m_iTestCase = testCase;
+	T = new Grid(m_iM, m_iN);
 	m_vfMovableObjectPos = Vec3(0, 0, 0);
 	m_vfRotate = Vec3(0, 0, 0);
 	//
@@ -54,47 +81,78 @@ void DiffusionSimulator::notifyCaseChanged(int testCase)
 	}
 }
 
-Grid* DiffusionSimulator::diffuseTemperatureExplicit() {//add your own parameters
-	Grid* newT = new Grid();
-	// to be implemented
-	//make sure that the temperature in boundary cells stays zero
+Grid* DiffusionSimulator::diffuseTemperatureExplicit(float timeStep)
+{
+	Grid & newT = new Grid(m_iM, m_iN);
+	float factor = m_fAlpha * timeStep / (m_fDeltaSpace * m_fDeltaSpace);
+	// make sure that the temperature in boundary cells stays zero
+	for (int i = 0; i < m_iM; i++)
+		for (int j = 0; j < m_iN; j++)
+			newT.at(i, j) = (1 + 4 * factor) * T.at(i, j) +
+				factor * (T.at(i+1, j) + T.at(i-1, j) + T.at(i, j+1) + T.at(i, j-1));
 	return newT;
 }
 
-void setupB(std::vector<Real>& b) {//add your own parameters
-	// to be implemented
-	//set vector B[sizeX*sizeY]
-	for (int i = 0; i < 25; i++) {
-		b.at(i) = 0;
-	}
+//--------------------------------------------------------------------------------------
+// Fill matrix T with T^(n+1) values from solved vector x of size (M-1)*(N-1)
+//--------------------------------------------------------------------------------------
+void fillT(std::vector<Real> x)
+{
+	// make sure that the temperature in boundary cells stays zero
+	for (int i = 1; i < m - 1; i++)
+		for (int j = 1; j < n - 1; j++)
+			at(i, j) = x.at((i-1)*(m-1) + (j-1));
 }
 
-void fillT() {//add your own parameters
-	// to be implemented
-	//fill T with solved vector x
-	//make sure that the temperature in boundary cells stays zero
+//--------------------------------------------------------------------------------------
+// Set up vector of size (M-1)*(N-1) (emulates (M-1)*(N-1) matrix)
+// with current T non-boundary values
+//--------------------------------------------------------------------------------------
+void Grid::setupB(std::vector<Real>& b)
+{
+	for (int i = 1; i < m - 1; i++)
+		for (int j = 1; j < n - 1; j++)
+			b.at((i-1)*(m-1) + (j-1)) = at(i, j);
 }
 
-void setupA(SparseMatrix<Real>& A, double factor) {//add your own parameters
-	// to be implemented
-	//setup Matrix A[sizeX*sizeY*sizeZ, sizeX*sizeY*sizeZ]
-	// set with:  A.set_element( index1, index2 , value );
-	// if needed, read with: A(index1, index2);
-	// avoid zero rows in A -> set the diagonal value for boundary cells to 1.0
-	for (int i = 0; i < 25; i++) {
-			A.set_element(i, i, 1); // set diagonal
-	}
+//--------------------------------------------------------------------------------------
+// Set up sparse matrix of size ((M-1)*(N-1))x((M-1)*(N-1))
+// (emulates ((M-1)x(N-1))x((M-1)x(N-1)) matrix) with linear system's coefficients
+//--------------------------------------------------------------------------------------
+void Grid::setupA(SparseMatrix<Real>& A, double factor)
+{=
+	// TO-DO avoid zero rows in A -> set the diagonal value for boundary cells to 1.0
+	_m = m - 1;
+	_n = n - 1;
+	for (int i = 0; i < _m; i++)
+		for (int j = 0; j < _n; j++)
+		{
+			// A.set_element(linear access of element in T^n,
+				// linear access of element in T^(n+1));
+			A.set_element(i*_m + j, i*_m + j, 1 + 4*factor);
+			if (i < _m - 1)
+				A.set_element(i*_m + j, (i+1)*_m + j, -factor);
+			if (i > 0)
+				A.set_element(i*_m + j, (i-1)*_m + j, -factor);
+			if (j < _n - 1)
+				A.set_element(i*_m + j, i*_m + (j+1), -factor);
+			if (j > 0)
+				A.set_element(i*_m + j, i*_m + (j-1), -factor);
+		}
 }
 
-
-void DiffusionSimulator::diffuseTemperatureImplicit() {//add your own parameters
-	// solve A T = b
-	// to be implemented
-	const int N = 25;//N = sizeX*sizeY*sizeZ
+//--------------------------------------------------------------------------------------
+// Solve AT=b
+//--------------------------------------------------------------------------------------
+void DiffusionSimulator::diffuseTemperatureImplicit(float timeStep)
+{
+	const int N = (m_iM - 1) * (m_iN - 1);
+	float factor = m_fAlpha * timeStep / (m_fDeltaSpace * m_fDeltaSpace);
+	// TO-DO add expected zeros per row
 	SparseMatrix<Real> *A = new SparseMatrix<Real> (N);
 	std::vector<Real> *b = new std::vector<Real>(N);
 
-	setupA(*A, 0.1);
+	setupA(*A, factor);
 	setupB(*b);
 
 	// perform solve
@@ -107,37 +165,42 @@ void DiffusionSimulator::diffuseTemperatureImplicit() {//add your own parameters
 	solver.set_solver_parameters(pcg_target_residual, pcg_max_iterations, 0.97, 0.25);
 
 	std::vector<Real> x(N);
-	for (int j = 0; j < N; ++j) { x[j] = 0.; }
+	for (int i = 0; i < N; i++) { x[i] = 0.0; }
 
 	// preconditioners: 0 off, 1 diagonal, 2 incomplete cholesky
 	solver.solve(*A, *b, x, ret_pcg_residual, ret_pcg_iterations, 0);
 	// x contains the new temperature values
-	fillT();//copy x to T
+	fillT(x);
 }
 
-
-
+//--------------------------------------------------------------------------------------
+// Update current T^n state to T^(n+1) for each frame
+//--------------------------------------------------------------------------------------
 void DiffusionSimulator::simulateTimestep(float timeStep)
 {
-	// to be implemented
-	// update current setup for each frame
 	switch (m_iTestCase)
 	{
 	case 0:
-		T = diffuseTemperatureExplicit();
+		T = diffuseTemperatureExplicit(timeStep);
 		break;
 	case 1:
-		diffuseTemperatureImplicit();
+		diffuseTemperatureImplicit(timeStep);
 		break;
 	}
 }
 
 void DiffusionSimulator::drawObjects()
 {
-	// to be implemented
-	//visualization
+	for (int i = 0; i < m_iM; i++)
+		for (int j = 0; j < m_iN; j++)
+		{
+			// red for negative values and white for positive ones
+			float temperature = T.at(i, j);
+			Vec3 color = new Vec3(temperature, 0.0, 0.0);
+			DUC->setUpLighting(color, color, color);
+			DUC->drawSphere(Vec3(i, j, 0), m_fRadius * Vec3(1, 1, 1));
+		}
 }
-
 
 void DiffusionSimulator::drawFrame(ID3D11DeviceContext* pd3dImmediateContext)
 {
