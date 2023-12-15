@@ -3,14 +3,16 @@
 
 #include "Simulator.h"
 #include "vectorbase.h"
+#include "pcgsolver.h"
 
-//impement your own grid class for saving grid data
 class Grid {
 public:
-	// Construtors
+	Grid();
 	Grid(int rows, int columns);
+
 	void setupB(std::vector<Real>& b);
 	void setupA(SparseMatrix<Real>& A, double factor);
+	void fillT(std::vector<Real> x);
 
 	float at(int i, int j) const
 	{ return values.at(i * m + j); };
@@ -19,7 +21,7 @@ public:
 	{ values.at(i * m + j) = new_value; };
 
 private:
-	int m
+	int m;
 	int n;
 	std::vector<float> values;
 };
@@ -43,23 +45,19 @@ public:
 	void onMouse(int x, int y);
 
 	// Specific Functions
-	void drawObjects();
-	Grid* diffuseTemperatureExplicit();
-	void diffuseTemperatureImplicit();
+	Grid & diffuseTemperatureExplicit(float timeStep);
+	void diffuseTemperatureImplicit(float timeStep);
 
 private:
 	// Attributes
-	Vec3  m_vfMovableObjectPos;
-	Vec3  m_vfMovableObjectFinalPos;
-	Vec3  m_vfRotate;
 	Point2D m_mouse;
 	Point2D m_trackmouse;
 	Point2D m_oldtrackmouse;
-	Grid & T; //save results of every time step
 	int m_iM;
 	int m_iN;
 	float m_fAlpha;
 	float m_fDeltaSpace;
+	Grid & T; //save results of every time step
 };
 
 #endif

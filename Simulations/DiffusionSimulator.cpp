@@ -9,21 +9,28 @@ Grid::Grid(int rows, int columns)
 {
 	m = rows;
 	n = columns;
-	std::vector<float> values = new std::vector<float>(m * n);
+	std::vector<float> values(m * n);
 	for (int i = 0; i < m; i++)
 		for (int j = 0; j < n; j++)
-			set(i, j) = 0.0;
+			set(i, j, 0.0);
+}
+
+Grid::Grid()
+{
+	// TO-DO update with minimum values
+	m = n = 16;
+	std::vector<float> values(m * n);
+	for (int i = 0; i < m; i++)
+		for (int j = 0; j < n; j++)
+			set(i, j, 0.0);
 }
 
 DiffusionSimulator::DiffusionSimulator()
+: T(Grid())
 {
 	m_iTestCase = 0;
-	m_vfMovableObjectPos = Vec3();
-	m_vfMovableObjectFinalPos = Vec3();
-	m_vfRotate = Vec3();
 	// TO-DO initialize with minimum values
-	m_iM = 0;
-	m_iN = 0;
+	m_iM = m_iN = 16;
 	m_fAlpha = 0.0;
 	m_fDeltaSpace = 0.0;
 }
@@ -61,9 +68,7 @@ void DiffusionSimulator::initUI(DrawingUtilitiesClass * DUC)
 void DiffusionSimulator::notifyCaseChanged(int testCase)
 {
 	m_iTestCase = testCase;
-	T = new Grid(m_iM, m_iN);
-	m_vfMovableObjectPos = Vec3(0, 0, 0);
-	m_vfRotate = Vec3(0, 0, 0);
+	T = Grid(m_iM, m_iN);
 	//
 	//to be implemented
 	//
@@ -81,27 +86,29 @@ void DiffusionSimulator::notifyCaseChanged(int testCase)
 	}
 }
 
-Grid* DiffusionSimulator::diffuseTemperatureExplicit(float timeStep)
+Grid & DiffusionSimulator::diffuseTemperatureExplicit(float timeStep)
 {
-	Grid & newT = new Grid(m_iM, m_iN);
+	Grid & newT = Grid(m_iM, m_iN);
 	float factor = m_fAlpha * timeStep / (m_fDeltaSpace * m_fDeltaSpace);
 	// make sure that the temperature in boundary cells stays zero
 	for (int i = 0; i < m_iM; i++)
 		for (int j = 0; j < m_iN; j++)
-			newT.at(i, j) = (1 + 4 * factor) * T.at(i, j) +
-				factor * (T.at(i+1, j) + T.at(i-1, j) + T.at(i, j+1) + T.at(i, j-1));
+			newT.set(i, j,
+				(1 + 4 * factor) * T.at(i, j) +
+				factor * (T.at(i+1, j) + T.at(i-1, j) + T.at(i, j+1) + T.at(i, j-1)));
 	return newT;
 }
 
 //--------------------------------------------------------------------------------------
 // Fill matrix T with T^(n+1) values from solved vector x of size (M-1)*(N-1)
 //--------------------------------------------------------------------------------------
-void fillT(std::vector<Real> x)
+void Grid::fillT(std::vector<Real> x)
 {
 	// make sure that the temperature in boundary cells stays zero
 	for (int i = 1; i < m - 1; i++)
 		for (int j = 1; j < n - 1; j++)
-			at(i, j) = x.at((i-1)*(m-1) + (j-1));
+			set(i, j,
+				x.at((i-1)*(m-1) + (j-1)));
 }
 
 //--------------------------------------------------------------------------------------
@@ -120,10 +127,10 @@ void Grid::setupB(std::vector<Real>& b)
 // (emulates ((M-1)x(N-1))x((M-1)x(N-1)) matrix) with linear system's coefficients
 //--------------------------------------------------------------------------------------
 void Grid::setupA(SparseMatrix<Real>& A, double factor)
-{=
+{
 	// TO-DO avoid zero rows in A -> set the diagonal value for boundary cells to 1.0
-	_m = m - 1;
-	_n = n - 1;
+	int _m = m - 1;
+	int _n = n - 1;
 	for (int i = 0; i < _m; i++)
 		for (int j = 0; j < _n; j++)
 		{
@@ -152,8 +159,8 @@ void DiffusionSimulator::diffuseTemperatureImplicit(float timeStep)
 	SparseMatrix<Real> *A = new SparseMatrix<Real> (N);
 	std::vector<Real> *b = new std::vector<Real>(N);
 
-	setupA(*A, factor);
-	setupB(*b);
+	T.setupA(*A, factor);
+	T.setupB(*b);
 
 	// perform solve
 	Real pcg_target_residual = 1e-05;
@@ -170,7 +177,7 @@ void DiffusionSimulator::diffuseTemperatureImplicit(float timeStep)
 	// preconditioners: 0 off, 1 diagonal, 2 incomplete cholesky
 	solver.solve(*A, *b, x, ret_pcg_residual, ret_pcg_iterations, 0);
 	// x contains the new temperature values
-	fillT(x);
+	T.fillT(x);
 }
 
 //--------------------------------------------------------------------------------------
@@ -189,22 +196,17 @@ void DiffusionSimulator::simulateTimestep(float timeStep)
 	}
 }
 
-void DiffusionSimulator::drawObjects()
+void DiffusionSimulator::drawFrame(ID3D11DeviceContext* pd3dImmediateContext)
 {
 	for (int i = 0; i < m_iM; i++)
 		for (int j = 0; j < m_iN; j++)
 		{
 			// red for negative values and white for positive ones
-			float temperature = T.at(i, j);
-			Vec3 color = new Vec3(temperature, 0.0, 0.0);
-			DUC->setUpLighting(color, color, color);
-			DUC->drawSphere(Vec3(i, j, 0), m_fRadius * Vec3(1, 1, 1));
+			//float temperature = T.at(i, j);
+			//Vec3 color = Vec3(0.0, 0.0, 0.0);
+			//DUC->setUpLighting(color, color, 0.0, color);
+			//DUC->drawSphere(Vec3(i, j, 0), 0.5 * Vec3(1, 1, 1));
 		}
-}
-
-void DiffusionSimulator::drawFrame(ID3D11DeviceContext* pd3dImmediateContext)
-{
-	drawObjects();
 }
 
 void DiffusionSimulator::onClick(int x, int y)
