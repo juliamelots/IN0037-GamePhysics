@@ -9,24 +9,11 @@ Grid::Grid(int rows, int columns)
 {
 	m = rows;
 	n = columns;
-	std::vector<float> values(m * n);
-	for (int i = 0; i < m; i++)
-		for (int j = 0; j < n; j++)
-			set(i, j, 0.0);
-}
-
-Grid::Grid()
-{
-	// TO-DO update with minimum values
-	m = n = 16;
-	std::vector<float> values(m * n);
-	for (int i = 0; i < m; i++)
-		for (int j = 0; j < n; j++)
-			set(i, j, 0.0);
+	std::vector<float> values(m * n, 0.0);
 }
 
 DiffusionSimulator::DiffusionSimulator()
-: T(Grid())
+: T(Grid(16, 16))
 {
 	m_iTestCase = 0;
 	// TO-DO initialize with minimum values
@@ -49,29 +36,28 @@ void DiffusionSimulator::reset()
 
 void DiffusionSimulator::initUI(DrawingUtilitiesClass * DUC)
 {
+	cout << "initUI start" << endl;
 	this->DUC = DUC;
 	// TO-DO what should be the minimum values?
-	TwAddVarRW(DUC->g_pTweakBar, "M", TW_TYPE_INT32, &m_iM, "min=16 step=1");
-	TwAddVarRW(DUC->g_pTweakBar, "N", TW_TYPE_INT32, &m_iN, "min=16 step=1");
-	TwAddVarRW(DUC->g_pTweakBar, "Diffusion Coeficient", TW_TYPE_FLOAT, &m_fAlpha, "min=0.01 step=0.01");
-	TwAddVarRW(DUC->g_pTweakBar, "SpaceStep", TW_TYPE_FLOAT, &m_fDeltaSpace, "min=0.001 step=0.001");
 	switch (m_iTestCase)
 	{
 	case 0:
+		TwAddVarRW(DUC->g_pTweakBar, "M", TW_TYPE_INT32, &m_iM, "min=16 step=1");
+		TwAddVarRW(DUC->g_pTweakBar, "N", TW_TYPE_INT32, &m_iN, "min=16 step=1");
+		TwAddVarRW(DUC->g_pTweakBar, "Diffusion Coeficient", TW_TYPE_FLOAT, &m_fAlpha, "min=0.01 step=0.01");
+		TwAddVarRW(DUC->g_pTweakBar, "SpaceStep", TW_TYPE_FLOAT, &m_fDeltaSpace, "min=0.001 step=0.001");
 		break;
 	case 1:
 		break;
 	default: break;
 	}
+	cout << "initUI end" << endl;
 }
 
 void DiffusionSimulator::notifyCaseChanged(int testCase)
 {
 	m_iTestCase = testCase;
 	T = Grid(m_iM, m_iN);
-	//
-	//to be implemented
-	//
 	switch (m_iTestCase)
 	{
 	case 0:
@@ -94,8 +80,8 @@ Grid & DiffusionSimulator::diffuseTemperatureExplicit(float timeStep)
 	for (int i = 0; i < m_iM; i++)
 		for (int j = 0; j < m_iN; j++)
 			newT.set(i, j,
-				(1 + 4 * factor) * T.at(i, j) +
-				factor * (T.at(i+1, j) + T.at(i-1, j) + T.at(i, j+1) + T.at(i, j-1)));
+				(1 + 4 * factor) * T.value(i, j) +
+				factor * (T.value(i+1, j) + T.value(i-1, j) + T.value(i, j+1) + T.value(i, j-1)));
 	return newT;
 }
 
@@ -119,7 +105,7 @@ void Grid::setupB(std::vector<Real>& b)
 {
 	for (int i = 1; i < m - 1; i++)
 		for (int j = 1; j < n - 1; j++)
-			b.at((i-1)*(m-1) + (j-1)) = at(i, j);
+			b.at((i-1)*(m-1) + (j-1)) = value(i, j);
 }
 
 //--------------------------------------------------------------------------------------
@@ -157,7 +143,7 @@ void DiffusionSimulator::diffuseTemperatureImplicit(float timeStep)
 	float factor = m_fAlpha * timeStep / (m_fDeltaSpace * m_fDeltaSpace);
 	// TO-DO add expected zeros per row
 	SparseMatrix<Real> *A = new SparseMatrix<Real> (N);
-	std::vector<Real> *b = new std::vector<Real>(N);
+	std::vector<Real> *b = new std::vector<Real>(N, 0.0);
 
 	T.setupA(*A, factor);
 	T.setupB(*b);
@@ -171,8 +157,7 @@ void DiffusionSimulator::diffuseTemperatureImplicit(float timeStep)
 	SparsePCGSolver<Real> solver;
 	solver.set_solver_parameters(pcg_target_residual, pcg_max_iterations, 0.97, 0.25);
 
-	std::vector<Real> x(N);
-	for (int i = 0; i < N; i++) { x[i] = 0.0; }
+	std::vector<Real> x(N, 0.0);
 
 	// preconditioners: 0 off, 1 diagonal, 2 incomplete cholesky
 	solver.solve(*A, *b, x, ret_pcg_residual, ret_pcg_iterations, 0);
@@ -202,7 +187,7 @@ void DiffusionSimulator::drawFrame(ID3D11DeviceContext* pd3dImmediateContext)
 		for (int j = 0; j < m_iN; j++)
 		{
 			// red for negative values and white for positive ones
-			//float temperature = T.at(i, j);
+			//float temperature = T.value(i, j);
 			//Vec3 color = Vec3(0.0, 0.0, 0.0);
 			//DUC->setUpLighting(color, color, 0.0, color);
 			//DUC->drawSphere(Vec3(i, j, 0), 0.5 * Vec3(1, 1, 1));

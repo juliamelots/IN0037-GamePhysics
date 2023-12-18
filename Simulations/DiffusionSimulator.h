@@ -7,14 +7,13 @@
 
 class Grid {
 public:
-	Grid();
 	Grid(int rows, int columns);
 
 	void setupB(std::vector<Real>& b);
 	void setupA(SparseMatrix<Real>& A, double factor);
 	void fillT(std::vector<Real> x);
 
-	float at(int i, int j) const
+	float value(int i, int j) const
 	{ return values.at(i * m + j); };
 
 	void set(int i, int j, float new_value)
@@ -40,7 +39,7 @@ public:
 	void drawFrame(ID3D11DeviceContext* pd3dImmediateContext);
 	void notifyCaseChanged(int testCase);
 	void simulateTimestep(float timeStep);
-	void externalForcesCalculations(float timeElapsed) {};
+	void externalForcesCalculations(float timeElapsed) { cout << "ext" << endl; };
 	void onClick(int x, int y);
 	void onMouse(int x, int y);
 
