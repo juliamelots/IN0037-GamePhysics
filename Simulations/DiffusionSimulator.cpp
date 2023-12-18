@@ -1,5 +1,7 @@
 #include "DiffusionSimulator.h"
 #include "pcgsolver.h"
+#include<ctime>
+
 using namespace std;
 
 
@@ -11,11 +13,11 @@ DiffusionSimulator::DiffusionSimulator()
 	m_vfRotate = Vec3();
 	m_coldColor = HSVColor(nVec3i(0,236,255));
 	m_hotColor = HSVColor(nVec3i(255, 19, 0));
-	T.ny = 16;
-	T.nx = 16;
+	T.ny = 50;
+	T.nx = 50;
 	T.nz = 1;
 	m_alpha = 0.001f;
-	T.x_diff_squared = 0.01f * 0.01f;
+	T.x_diff_squared = 0.1f * 0.1f;
 	// rest to be implemented
 }
 
@@ -33,6 +35,19 @@ void DiffusionSimulator::reset() {
 void DiffusionSimulator::initUI(DrawingUtilitiesClass* DUC)
 {
 	this->DUC = DUC;
+	switch (m_iTestCase) {
+	case 0:
+	case 1:
+		//TwAddVarCB(DUC->g_pTweakBar, "nx", TW_TYPE_INT32, DiffusionSimulator::setNx, DiffusionSimulator::getNx, this,"min=1");
+		//TwAddVarCB(DUC->g_pTweakBar, "ny", TW_TYPE_INT32, DiffusionSimulator::setNy, DiffusionSimulator::getNy, this, "min=1");
+		break;
+	case 2:
+	case 3:
+		//TwAddVarCB(DUC->g_pTweakBar, "nx", TW_TYPE_INT32, DiffusionSimulator::setNx, DiffusionSimulator::getNx, this, "min=1");
+		//TwAddVarCB(DUC->g_pTweakBar, "ny", TW_TYPE_INT32, DiffusionSimulator::setNy, DiffusionSimulator::getNy, this, "min=1");
+		//TwAddVarCB(DUC->g_pTweakBar, "nz", TW_TYPE_INT32, DiffusionSimulator::setNz, DiffusionSimulator::getNz, this, "min=1");
+		break;
+	}
 	// to be implemented
 	
 }
@@ -43,16 +58,18 @@ void DiffusionSimulator::notifyCaseChanged(int testCase)
 	m_vfMovableObjectPos = Vec3(0, 0, 0);
 	m_vfRotate = Vec3(0, 0, 0);
 	T.t_space.clear();
+	std::mt19937 mt(time(nullptr));
+	std::uniform_real_distribution<float> randCol(0.0f, 500.0f);
 	for (int i = 0; i < T.nx; i++) {
 		std::vector<float> t_row;
 		float initial_value = 500;
 		for (int j = 0; j < T.ny; j++) {
 			for (int k = 0; k < T.nz; k++) {
 				if (m_iTestCase < 2)
-					t_row.push_back((j == 0 || i == 0 || j > 8 || i > 8) ? 0 : initial_value);
+					t_row.push_back((j == 0 || i == 0 || j == T.ny - 1 || i == T.nx - 1 ) ? 0 : randCol(mt));
 				else
 					t_row.push_back((j == 0 || i == 0 || j == T.ny - 1 || i == T.nx - 1 ||
-						k == 0 || k == T.nz - 1) ? 0 : initial_value);
+						k == 0 || k == T.nz - 1) ? 0 : randCol(mt));
 			}
 		}
 		T.t_space.push_back(t_row);
@@ -92,9 +109,9 @@ void DiffusionSimulator::notifyCaseChanged(int testCase)
 void DiffusionSimulator::diffuseTemperatureExplicit(float timeStep) {
 	std::vector<std::vector<float>> new_t_space;
 	float r{ (m_alpha * timeStep) / (T.x_diff_squared) };
-	for (int i = 0; i < T.ny; i++) {
+	for (int i = 0; i < T.nx; i++) {
 		std::vector<float> t_row;
-		for (int j = 0; j < T.nx; j++) {
+		for (int j = 0; j < T.ny; j++) {
 			if ((j == 0 || i == 0 || j == T.nx - 1 || i == T.ny - 1)) t_row.push_back(0);
 			else 
 				t_row.push_back( T.t_space[i][j] + r * (T.t_space[i + 1][j] + T.t_space[i][j + 1] + T.t_space[i - 1][j]
@@ -102,6 +119,13 @@ void DiffusionSimulator::diffuseTemperatureExplicit(float timeStep) {
 		}
 		new_t_space.push_back(t_row);
 	}
+
+	//for (int i = 0; i < T.nx; i++) {
+		//for (int j = 0; j < T.ny; j++) {
+			//cout << new_t_space[i][j] << " ";
+		//}
+		//cout << endl;
+	//}
 	T.t_space = new_t_space;
 
 }
@@ -214,12 +238,17 @@ void DiffusionSimulator::drawObjects()
 	const int space_max = 1;
 	float x_diff = static_cast<float>(space_max - space_min) / static_cast<float>(T.nx);
 	float y_diff = static_cast<float>(space_max - space_min) / static_cast<float>(T.ny);
+	//Vec3 coldColor = Vec3(0, 236, 255) / 255.0;
+	//Vec3 hotColor = Vec3(255, 19, 0) / 255.0;
+	Vec3 coldColor = Vec3(0, 0, 0);
+	Vec3 hotColor = Vec3(1, 1, 1);
 	if (m_iTestCase < 2) {
 		for (int i = 0; i < T.nx; i++) {
 			for (int j = 0; j < T.ny; j++) {
 				float rel_temp = (T.t_space[i][j] - min_temp) / (max_temp - min_temp);
-				Vec3 color = colorLerp(rel_temp);
-				DUC->setUpLighting(Vec3(), color, 20,color);
+				//Vec3 color = colorLerp(rel_temp);
+				Vec3 color = coldColor * (1 - rel_temp) + hotColor * rel_temp;
+				DUC->setUpLighting(Vec3(), color, 80,color);
 				DUC->drawSphere(Vec3(space_min + x_diff * i, space_min + y_diff * j, 0), Vec3(0.1,0.1,0.1));
 			}
 		}
