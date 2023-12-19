@@ -54,14 +54,14 @@ public:
 	static void TW_CALL setNx(const void* value, void* clientData)
 	{
 		DiffusionSimulator* ds = static_cast<DiffusionSimulator*> (clientData);
-		ds->T.nx = *(int*)value;
+		ds->T.nx = *static_cast<const int*>(value);
 		ds->notifyCaseChanged(ds->m_iTestCase);
 	}
 
 	static void TW_CALL setNy(const void* value, void* clientData)
 	{
 		DiffusionSimulator* ds = static_cast<DiffusionSimulator*> (clientData);
-		ds->T.ny = *(int*)value;
+		ds->T.ny = *static_cast<const int*>(value);
 		ds->notifyCaseChanged(ds->m_iTestCase);
 		
 	}
@@ -69,7 +69,7 @@ public:
 	static void TW_CALL setNz(const void* value, void* clientData)
 	{
 		DiffusionSimulator* ds = static_cast<DiffusionSimulator*> (clientData);
-		ds->T.nz = *(const int*)value;
+		ds->T.nz = *static_cast<const int*>(value);
 		ds->notifyCaseChanged(ds->m_iTestCase);
 	}
 

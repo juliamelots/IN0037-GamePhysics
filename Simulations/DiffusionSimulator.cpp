@@ -13,10 +13,11 @@ DiffusionSimulator::DiffusionSimulator()
 	m_vfRotate = Vec3();
 	m_coldColor = HSVColor(nVec3i(0,236,255));
 	m_hotColor = HSVColor(nVec3i(255, 19, 0));
-	T.ny = 50;
-	T.nx = 50;
+	T.ny = 20;
+	T.nx = 16;
 	T.nz = 1;
 	m_alpha = 0.001f;
+	cout << "here" << endl;
 	T.x_diff_squared = 0.1f * 0.1f;
 	// rest to be implemented
 }
@@ -38,14 +39,14 @@ void DiffusionSimulator::initUI(DrawingUtilitiesClass* DUC)
 	switch (m_iTestCase) {
 	case 0:
 	case 1:
-		//TwAddVarCB(DUC->g_pTweakBar, "nx", TW_TYPE_INT32, DiffusionSimulator::setNx, DiffusionSimulator::getNx, this,"min=1");
-		//TwAddVarCB(DUC->g_pTweakBar, "ny", TW_TYPE_INT32, DiffusionSimulator::setNy, DiffusionSimulator::getNy, this, "min=1");
+		TwAddVarCB(DUC->g_pTweakBar, "nx", TW_TYPE_INT32, DiffusionSimulator::setNx, DiffusionSimulator::getNx, this,"min=1");
+		TwAddVarCB(DUC->g_pTweakBar, "ny", TW_TYPE_INT32, DiffusionSimulator::setNy, DiffusionSimulator::getNy, this, "min=1");
 		break;
 	case 2:
 	case 3:
-		//TwAddVarCB(DUC->g_pTweakBar, "nx", TW_TYPE_INT32, DiffusionSimulator::setNx, DiffusionSimulator::getNx, this, "min=1");
-		//TwAddVarCB(DUC->g_pTweakBar, "ny", TW_TYPE_INT32, DiffusionSimulator::setNy, DiffusionSimulator::getNy, this, "min=1");
-		//TwAddVarCB(DUC->g_pTweakBar, "nz", TW_TYPE_INT32, DiffusionSimulator::setNz, DiffusionSimulator::getNz, this, "min=1");
+		TwAddVarCB(DUC->g_pTweakBar, "nx", TW_TYPE_INT32, DiffusionSimulator::setNx, DiffusionSimulator::getNx, this, "min=1");
+		TwAddVarCB(DUC->g_pTweakBar, "ny", TW_TYPE_INT32, DiffusionSimulator::setNy, DiffusionSimulator::getNy, this, "min=1");
+		TwAddVarCB(DUC->g_pTweakBar, "nz", TW_TYPE_INT32, DiffusionSimulator::setNz, DiffusionSimulator::getNz, this, "min=1");
 		break;
 	}
 	// to be implemented
@@ -60,6 +61,8 @@ void DiffusionSimulator::notifyCaseChanged(int testCase)
 	T.t_space.clear();
 	std::mt19937 mt(time(nullptr));
 	std::uniform_real_distribution<float> randCol(0.0f, 500.0f);
+	cout << T.nx << endl;
+	cout << "caseChanged" << endl;
 	for (int i = 0; i < T.nx; i++) {
 		std::vector<float> t_row;
 		float initial_value = 500;
@@ -74,6 +77,7 @@ void DiffusionSimulator::notifyCaseChanged(int testCase)
 		}
 		T.t_space.push_back(t_row);
 	}
+	cout << T.t_space.size() << " " << T.t_space[0].size() << endl;
 	//
 	// to be implemented
 	//
@@ -112,7 +116,7 @@ void DiffusionSimulator::diffuseTemperatureExplicit(float timeStep) {
 	for (int i = 0; i < T.nx; i++) {
 		std::vector<float> t_row;
 		for (int j = 0; j < T.ny; j++) {
-			if ((j == 0 || i == 0 || j == T.nx - 1 || i == T.ny - 1)) t_row.push_back(0);
+			if ((j == 0 || i == 0 || i == T.nx - 1 || j == T.ny - 1)) t_row.push_back(0);
 			else 
 				t_row.push_back( T.t_space[i][j] + r * (T.t_space[i + 1][j] + T.t_space[i][j + 1] + T.t_space[i - 1][j]
 					+ T.t_space[i][j - 1] - 4 * T.t_space[i][j]));
