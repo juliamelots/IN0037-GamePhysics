@@ -36,22 +36,14 @@ void DiffusionSimulator::reset()
 
 void DiffusionSimulator::initUI(DrawingUtilitiesClass * DUC)
 {
-	cout << "initUI start" << endl;
 	this->DUC = DUC;
 	// TO-DO what should be the minimum values?
-	switch (m_iTestCase)
-	{
-	case 0:
-		TwAddVarRW(DUC->g_pTweakBar, "M", TW_TYPE_INT32, &m_iM, "min=16 step=1");
-		TwAddVarRW(DUC->g_pTweakBar, "N", TW_TYPE_INT32, &m_iN, "min=16 step=1");
-		TwAddVarRW(DUC->g_pTweakBar, "Diffusion Coeficient", TW_TYPE_FLOAT, &m_fAlpha, "min=0.01 step=0.01");
-		TwAddVarRW(DUC->g_pTweakBar, "SpaceStep", TW_TYPE_FLOAT, &m_fDeltaSpace, "min=0.001 step=0.001");
-		break;
-	case 1:
-		break;
-	default: break;
-	}
-	cout << "initUI end" << endl;
+	TwAddVarRW(DUC->g_pTweakBar, "M", TW_TYPE_INT32, &m_iM, "min=16 step=1");
+	TwAddVarRW(DUC->g_pTweakBar, "N", TW_TYPE_INT32, &m_iN, "min=16 step=1");
+	// if (m_iTestCase > 1) // 3D implementations
+	// 	TwAddVarRW(DUC->g_pTweakBar, "P", TW_TYPE_INT32, &m_iP, "min=16 step=1");
+	TwAddVarRW(DUC->g_pTweakBar, "Diffusion Coeficient", TW_TYPE_FLOAT, &m_fAlpha, "min=0.01 step=0.01");
+	TwAddVarRW(DUC->g_pTweakBar, "SpaceStep", TW_TYPE_FLOAT, &m_fDeltaSpace, "min=0.001 step=0.001");
 }
 
 void DiffusionSimulator::notifyCaseChanged(int testCase)
@@ -77,8 +69,9 @@ Grid & DiffusionSimulator::diffuseTemperatureExplicit(float timeStep)
 	Grid & newT = Grid(m_iM, m_iN);
 	float factor = m_fAlpha * timeStep / (m_fDeltaSpace * m_fDeltaSpace);
 	// make sure that the temperature in boundary cells stays zero
-	for (int i = 0; i < m_iM; i++)
-		for (int j = 0; j < m_iN; j++)
+	// -> limit for loops to non-boundary cells
+	for (int i = 1; i < m_iM-1; i++)
+		for (int j = 1; j < m_iN-1; j++)
 			newT.set(i, j,
 				(1 + 4 * factor) * T.value(i, j) +
 				factor * (T.value(i+1, j) + T.value(i-1, j) + T.value(i, j+1) + T.value(i, j-1)));
@@ -86,51 +79,49 @@ Grid & DiffusionSimulator::diffuseTemperatureExplicit(float timeStep)
 }
 
 //--------------------------------------------------------------------------------------
-// Fill matrix T with T^(n+1) values from solved vector x of size (M-1)*(N-1)
+// Fill matrix T with T^(n+1) values from solved vector x of size M*N
 //--------------------------------------------------------------------------------------
 void Grid::fillT(std::vector<Real> x)
 {
 	// make sure that the temperature in boundary cells stays zero
-	for (int i = 1; i < m - 1; i++)
-		for (int j = 1; j < n - 1; j++)
-			set(i, j,
-				x.at((i-1)*(m-1) + (j-1)));
+	// -> limit for loops to non-boundary cells
+	for (int i = 1; i < m-1; i++)
+		for (int j = 1; j < n-1; j++)
+			set(i, j, x.at(i*m + j));
 }
 
 //--------------------------------------------------------------------------------------
-// Set up vector of size (M-1)*(N-1) (emulates (M-1)*(N-1) matrix)
-// with current T non-boundary values
+// Set up vector of size M*N (emulates MxN matrix) with current T values
 //--------------------------------------------------------------------------------------
 void Grid::setupB(std::vector<Real>& b)
 {
-	for (int i = 1; i < m - 1; i++)
-		for (int j = 1; j < n - 1; j++)
-			b.at((i-1)*(m-1) + (j-1)) = value(i, j);
+	for (int i = 0; i < m; i++)
+		for (int j = 0; j < n; j++)
+			b.at(i*m + j) = value(i, j);
 }
 
 //--------------------------------------------------------------------------------------
-// Set up sparse matrix of size ((M-1)*(N-1))x((M-1)*(N-1))
-// (emulates ((M-1)x(N-1))x((M-1)x(N-1)) matrix) with linear system's coefficients
+// Set up sparse matrix of size (M*N)x(M*N)
+// (emulates (MxN)x(MxN) matrix) with linear system's coefficients
 //--------------------------------------------------------------------------------------
 void Grid::setupA(SparseMatrix<Real>& A, double factor)
 {
-	// TO-DO avoid zero rows in A -> set the diagonal value for boundary cells to 1.0
-	int _m = m - 1;
-	int _n = n - 1;
-	for (int i = 0; i < _m; i++)
-		for (int j = 0; j < _n; j++)
+	// avoid zero rows in A -> set the diagonal value for boundary cells to 1.0
+	for (int i = 0; i < m; i++)
+		for (int j = 0; j < n; j++)
 		{
-			// A.set_element(linear access of element in T^n,
-				// linear access of element in T^(n+1));
-			A.set_element(i*_m + j, i*_m + j, 1 + 4*factor);
-			if (i < _m - 1)
-				A.set_element(i*_m + j, (i+1)*_m + j, -factor);
-			if (i > 0)
-				A.set_element(i*_m + j, (i-1)*_m + j, -factor);
-			if (j < _n - 1)
-				A.set_element(i*_m + j, i*_m + (j+1), -factor);
-			if (j > 0)
-				A.set_element(i*_m + j, i*_m + (j-1), -factor);
+			if (isBoudary(i, j))
+				A.set_element(i*m + j, i*m + j, 1 + 4*factor);
+			else
+			{
+				// A.set_element(linear access of element in T^n,
+				//  linear access of element in T^(n+1));
+				A.set_element(i*m + j, i*m + j, 1 + 4*factor);
+				A.set_element(i*m + j, (i+1)*m + j, -factor);
+				A.set_element(i*m + j, (i-1)*m + j, -factor);
+				A.set_element(i*m + j, i*m + (j+1), -factor);
+				A.set_element(i*m + j, i*m + (j-1), -factor);
+			}
 		}
 }
 
@@ -139,10 +130,9 @@ void Grid::setupA(SparseMatrix<Real>& A, double factor)
 //--------------------------------------------------------------------------------------
 void DiffusionSimulator::diffuseTemperatureImplicit(float timeStep)
 {
-	const int N = (m_iM - 1) * (m_iN - 1);
+	const int N = m_iM * m_iN;
 	float factor = m_fAlpha * timeStep / (m_fDeltaSpace * m_fDeltaSpace);
-	// TO-DO add expected zeros per row
-	SparseMatrix<Real> *A = new SparseMatrix<Real> (N);
+	SparseMatrix<Real> *A = new SparseMatrix<Real> (N); // TO-DO add expected zeros per row
 	std::vector<Real> *b = new std::vector<Real>(N, 0.0);
 
 	T.setupA(*A, factor);

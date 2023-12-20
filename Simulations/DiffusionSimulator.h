@@ -13,15 +13,28 @@ public:
 	void setupA(SparseMatrix<Real>& A, double factor);
 	void fillT(std::vector<Real> x);
 
+	bool isBoudary(int i, int j) const
+	{ return (i == 0 || i == m-1 || j == 0 || j == n-1); };
+
 	float value(int i, int j) const
-	{ return values.at(i * m + j); };
+	{
+		if (isBoudary(i,j)) {cout << "index out of bounds" << endl; return 1.0;}
+		return values.at(i * m + j);
+	};
 
 	void set(int i, int j, float new_value)
-	{ values.at(i * m + j) = new_value; };
+	{
+		if (isBoudary(i,j)) {cout << "index out of bounds" << endl; return 1.0;}
+		if (new_value > max) max = new_value;
+		else if (new_value < min) min = new_value;
+		values.at(i * m + j) = new_value;
+	};
 
 private:
 	int m;
 	int n;
+	float max;
+	float min;
 	std::vector<float> values;
 };
 
