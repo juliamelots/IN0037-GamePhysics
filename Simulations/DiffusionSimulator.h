@@ -34,6 +34,7 @@ public:
 private:
 	int m;
 	int n;
+	int p;
 	float max;
 	float min;
 	std::vector<float> values;
