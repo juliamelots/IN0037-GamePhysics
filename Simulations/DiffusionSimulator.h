@@ -8,6 +8,7 @@
 class Grid {
 public:
 	Grid(int rows, int columns);
+	Grid(int dim1, int dim2, int dim3);
 
 	void setupB(std::vector<Real>& b);
 	void setupA(SparseMatrix<Real>& A, double factor);
@@ -67,6 +68,7 @@ private:
 	Point2D m_oldtrackmouse;
 	int m_iM;
 	int m_iN;
+	int m_iP;
 	float m_fAlpha;
 	float m_fDeltaSpace;
 	Grid & T; //save results of every time step

@@ -9,7 +9,16 @@ Grid::Grid(int rows, int columns)
 {
 	m = rows;
 	n = columns;
+	p = 1;
 	std::vector<float> values(m * n, 0.0);
+}
+
+Grid::Grid(int dim1, int dim2, int dim3)
+{
+	m = dim1;
+	n = dim2;
+	p = dim3;
+	std::vector<float> values(m * n * p, 0.0);
 }
 
 DiffusionSimulator::DiffusionSimulator()
@@ -18,6 +27,7 @@ DiffusionSimulator::DiffusionSimulator()
 	m_iTestCase = 0;
 	// TO-DO initialize with minimum values
 	m_iM = m_iN = 16;
+	m_iP = 1;
 	m_fAlpha = 0.0;
 	m_fDeltaSpace = 0.0;
 }
@@ -40,8 +50,8 @@ void DiffusionSimulator::initUI(DrawingUtilitiesClass * DUC)
 	// TO-DO what should be the minimum values?
 	TwAddVarRW(DUC->g_pTweakBar, "M", TW_TYPE_INT32, &m_iM, "min=16 step=1");
 	TwAddVarRW(DUC->g_pTweakBar, "N", TW_TYPE_INT32, &m_iN, "min=16 step=1");
-	// if (m_iTestCase > 1) // 3D implementations
-	// 	TwAddVarRW(DUC->g_pTweakBar, "P", TW_TYPE_INT32, &m_iP, "min=16 step=1");
+	if (m_iTestCase > 1) // 3D implementations
+		TwAddVarRW(DUC->g_pTweakBar, "P", TW_TYPE_INT32, &m_iP, "min=16 step=1");
 	TwAddVarRW(DUC->g_pTweakBar, "Diffusion Coeficient", TW_TYPE_FLOAT, &m_fAlpha, "min=0.01 step=0.01");
 	TwAddVarRW(DUC->g_pTweakBar, "SpaceStep", TW_TYPE_FLOAT, &m_fDeltaSpace, "min=0.001 step=0.001");
 }
