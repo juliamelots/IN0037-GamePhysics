@@ -7,25 +7,39 @@
 
 class Grid {
 public:
+	Grid() : m(1), n(1), p(1) {};
 	Grid(int rows, int columns);
-	Grid(int dim1, int dim2, int dim3);
 
 	void setupB(std::vector<Real>& b);
 	void setupA(SparseMatrix<Real>& A, double factor);
 	void fillT(std::vector<Real> x);
 
-	bool isBoudary(int i, int j) const
+	void newDimensions(int rows, int columns)
+	{
+		values.clear();
+		values.shrink_to_fit();
+		m = rows;
+		n = columns;
+		for (int i = 0; i < m; i++)
+			for (int j = 0; j < n; j++)
+				values.push_back(0.0);
+	}
+
+	bool isOutOfBounds(int i, int j) const
+	{ return (i < 0 || i > m-1 || j < 0 || j > n-1); };
+
+	bool isBoundary(int i, int j) const
 	{ return (i == 0 || i == m-1 || j == 0 || j == n-1); };
 
 	float value(int i, int j) const
 	{
-		if (isBoudary(i,j)) {cout << "index out of bounds" << endl; return 1.0;}
+		if (isOutOfBounds(i,j)) {cout << "index out of bounds" << endl; return 1.0;}
 		return values.at(i * m + j);
 	};
 
 	void set(int i, int j, float new_value)
 	{
-		if (isBoudary(i,j)) {cout << "index out of bounds" << endl; return 1.0;}
+		if (isOutOfBounds(i,j)) {cout << "index out of bounds" << endl; return;}
 		if (new_value > max) max = new_value;
 		else if (new_value < min) min = new_value;
 		values.at(i * m + j) = new_value;
@@ -59,7 +73,7 @@ public:
 	void onMouse(int x, int y);
 
 	// Specific Functions
-	Grid & diffuseTemperatureExplicit(float timeStep);
+	void diffuseTemperatureExplicit(float timeStep);
 	void diffuseTemperatureImplicit(float timeStep);
 
 private:

@@ -7,29 +7,21 @@ using namespace std;
 //--------------------------------------------------------------------------------------
 Grid::Grid(int rows, int columns)
 {
-	m = rows;
-	n = columns;
-	p = 1;
-	std::vector<float> values(m * n, 0.0);
-}
-
-Grid::Grid(int dim1, int dim2, int dim3)
-{
-	m = dim1;
-	n = dim2;
-	p = dim3;
-	std::vector<float> values(m * n * p, 0.0);
+	cout << "init grid start" << rows << columns << endl;
+	newDimensions(rows, columns);
+	cout << "init grid end" << rows << columns << endl;
 }
 
 DiffusionSimulator::DiffusionSimulator()
-: T(Grid(16, 16))
+: T(Grid())
 {
+	cout << "init start" << endl;
 	m_iTestCase = 0;
 	// TO-DO initialize with minimum values
-	m_iM = m_iN = 16;
-	m_iP = 1;
-	m_fAlpha = 0.0;
-	m_fDeltaSpace = 0.0;
+	m_iM = m_iN = m_iP = 1;
+	m_fAlpha = 1.0;
+	m_fDeltaSpace = 1.0;
+	cout << "init end" << endl;
 }
 
 const char * DiffusionSimulator::getTestCasesStr()
@@ -46,20 +38,22 @@ void DiffusionSimulator::reset()
 
 void DiffusionSimulator::initUI(DrawingUtilitiesClass * DUC)
 {
+	cout << "init UI start" << endl;
 	this->DUC = DUC;
 	// TO-DO what should be the minimum values?
-	TwAddVarRW(DUC->g_pTweakBar, "M", TW_TYPE_INT32, &m_iM, "min=16 step=1");
-	TwAddVarRW(DUC->g_pTweakBar, "N", TW_TYPE_INT32, &m_iN, "min=16 step=1");
+	TwAddVarRW(DUC->g_pTweakBar, "M", TW_TYPE_INT32, &m_iM, "min=16");
+	TwAddVarRW(DUC->g_pTweakBar, "N", TW_TYPE_INT32, &m_iN, "min=16");
 	if (m_iTestCase > 1) // 3D implementations
-		TwAddVarRW(DUC->g_pTweakBar, "P", TW_TYPE_INT32, &m_iP, "min=16 step=1");
+		TwAddVarRW(DUC->g_pTweakBar, "P", TW_TYPE_INT32, &m_iP, "min=16");
 	TwAddVarRW(DUC->g_pTweakBar, "Diffusion Coeficient", TW_TYPE_FLOAT, &m_fAlpha, "min=0.01 step=0.01");
 	TwAddVarRW(DUC->g_pTweakBar, "SpaceStep", TW_TYPE_FLOAT, &m_fDeltaSpace, "min=0.001 step=0.001");
+	cout << "init UI end" << endl;
 }
 
 void DiffusionSimulator::notifyCaseChanged(int testCase)
 {
 	m_iTestCase = testCase;
-	T = Grid(m_iM, m_iN);
+	T.newDimensions(m_iM, m_iN);
 	switch (m_iTestCase)
 	{
 	case 0:
@@ -74,18 +68,27 @@ void DiffusionSimulator::notifyCaseChanged(int testCase)
 	}
 }
 
-Grid & DiffusionSimulator::diffuseTemperatureExplicit(float timeStep)
+void DiffusionSimulator::diffuseTemperatureExplicit(float timeStep)
 {
-	Grid & newT = Grid(m_iM, m_iN);
+	cout << "init exp start" << endl;
+	std::vector<Real> newT;
 	float factor = m_fAlpha * timeStep / (m_fDeltaSpace * m_fDeltaSpace);
 	// make sure that the temperature in boundary cells stays zero
-	// -> limit for loops to non-boundary cells
-	for (int i = 1; i < m_iM-1; i++)
-		for (int j = 1; j < m_iN-1; j++)
-			newT.set(i, j,
-				(1 + 4 * factor) * T.value(i, j) +
-				factor * (T.value(i+1, j) + T.value(i-1, j) + T.value(i, j+1) + T.value(i, j-1)));
-	return newT;
+	for (int i = 0; i < m_iM; i++)
+		for (int j = 0; j < m_iN; j++)
+		{
+			if (T.isBoundary(i, j))
+				newT.push_back(0.0);
+			else
+				newT.push_back
+				(
+					(1 + 4 * factor) * T.value(i, j)
+					+ factor * (T.value(i + 1, j) + T.value(i - 1, j)
+						+ T.value(i, j + 1) + T.value(i, j - 1))
+				);
+		}
+	T.fillT(newT);
+	cout << "init exp end" << endl;
 }
 
 //--------------------------------------------------------------------------------------
@@ -95,9 +98,11 @@ void Grid::fillT(std::vector<Real> x)
 {
 	// make sure that the temperature in boundary cells stays zero
 	// -> limit for loops to non-boundary cells
+	cout << "fillT start" << endl;
 	for (int i = 1; i < m-1; i++)
-		for (int j = 1; j < n-1; j++)
+		for (int j = 1; j < n - 1; j++)
 			set(i, j, x.at(i*m + j));
+	cout << "fillT end" << endl;
 }
 
 //--------------------------------------------------------------------------------------
@@ -105,9 +110,11 @@ void Grid::fillT(std::vector<Real> x)
 //--------------------------------------------------------------------------------------
 void Grid::setupB(std::vector<Real>& b)
 {
+	cout << "setB start" << endl;
 	for (int i = 0; i < m; i++)
 		for (int j = 0; j < n; j++)
-			b.at(i*m + j) = value(i, j);
+			b.push_back(value(i, j));
+	cout << "setB end" << endl;
 }
 
 //--------------------------------------------------------------------------------------
@@ -117,10 +124,11 @@ void Grid::setupB(std::vector<Real>& b)
 void Grid::setupA(SparseMatrix<Real>& A, double factor)
 {
 	// avoid zero rows in A -> set the diagonal value for boundary cells to 1.0
+	cout << "setA start" << endl;
 	for (int i = 0; i < m; i++)
 		for (int j = 0; j < n; j++)
 		{
-			if (isBoudary(i, j))
+			if (isBoundary(i, j))
 				A.set_element(i*m + j, i*m + j, 1 + 4*factor);
 			else
 			{
@@ -133,6 +141,7 @@ void Grid::setupA(SparseMatrix<Real>& A, double factor)
 				A.set_element(i*m + j, i*m + (j-1), -factor);
 			}
 		}
+	cout << "setA end" << endl;
 }
 
 //--------------------------------------------------------------------------------------
@@ -143,7 +152,7 @@ void DiffusionSimulator::diffuseTemperatureImplicit(float timeStep)
 	const int N = m_iM * m_iN;
 	float factor = m_fAlpha * timeStep / (m_fDeltaSpace * m_fDeltaSpace);
 	SparseMatrix<Real> *A = new SparseMatrix<Real> (N); // TO-DO add expected zeros per row
-	std::vector<Real> *b = new std::vector<Real>(N, 0.0);
+	std::vector<Real> *b = new std::vector<Real> (N);
 
 	T.setupA(*A, factor);
 	T.setupB(*b);
@@ -173,7 +182,7 @@ void DiffusionSimulator::simulateTimestep(float timeStep)
 	switch (m_iTestCase)
 	{
 	case 0:
-		T = diffuseTemperatureExplicit(timeStep);
+		diffuseTemperatureExplicit(timeStep);
 		break;
 	case 1:
 		diffuseTemperatureImplicit(timeStep);
