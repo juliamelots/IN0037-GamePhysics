@@ -7,7 +7,7 @@ DiffusionSimulator::DiffusionSimulator()
 {
 	m_iTestCase = 0;
 	// TO-DO initialize with minimum values
-	m_fAlpha = 0.01;
+	m_fAlpha = 0.3;
 	m_fDeltaSpace = 0.01;
 	m_iX = m_iNewX = 16;
 	m_iY = m_iNewY = 16;
@@ -78,7 +78,7 @@ void DiffusionSimulator::notifyCaseChanged(int testCase)
 void DiffusionSimulator::diffuseTemperatureExplicit(float timeStep)
 {
 	int i, j, k;
-	std::vector<float> new_T;
+	std::vector<Real> new_T;
 	float factor = (m_fAlpha * timeStep) / (m_fDeltaSpace);
 	for (int center = 0; center < T.size(); center++) {
 		std::tie(i, j, k) = idx(center);
@@ -96,7 +96,7 @@ void DiffusionSimulator::diffuseTemperatureExplicit(float timeStep)
 			new_T.push_back(new_value);
 		}
 	}
-	T = new_T;
+	fillT(new_T);
 }
 
 //--------------------------------------------------------------------------------------
@@ -133,6 +133,7 @@ void DiffusionSimulator::setupT()
 void DiffusionSimulator::fillT(std::vector<Real> x)
 {
 	cout << "fillT start" << endl;
+	m_fMaxValue = m_fMinValue = 0.0;
 	for (int i = 0; i < m_iX; i++)
 		for (int j = 0; j < m_iY; j++)
 			for (int k = 0; k < m_iZ; k++)
@@ -261,6 +262,8 @@ void DiffusionSimulator::simulateTimestep(float timeStep)
 //--------------------------------------------------------------------------------------
 void DiffusionSimulator::drawFrame(ID3D11DeviceContext* pd3dImmediateContext)
 {
+	cout << "draw start" << endl;
+	cout << "max " << m_fMaxValue << " min " << m_fMinValue << endl;
 	float sign;
 	Vec3 color;
 	for (int i = 0; i < m_iX; i++)
@@ -272,11 +275,18 @@ void DiffusionSimulator::drawFrame(ID3D11DeviceContext* pd3dImmediateContext)
 				else
 				{
 					sign = T.at(idx(i, j, k)) > 0;
-					color = Vec3(getNormalValue(i, j, k), sign, sign);
+					// sign portion only for debugging! needs to fix color
+					if (sign)
+						color = Vec3(0, getNormalValue(i, j, k), 0);
+					else
+						color = Vec3(getNormalValue(i, j, k), 0,0);
+					cout << i << " " << j << " " << k << " -> ";
+					cout << T.at(idx(i, j, k)) << " " << getNormalValue(i, j, k) << endl;
 				}
 				DUC->setUpLighting(Vec3(), 0.4 * Vec3(1, 1, 1), 100, color);
 				DUC->drawSphere(Vec3(i, j, 0), 0.5 * Vec3(1, 1, 1));
 			}
+	cout << "draw end" << endl;
 }
 
 void DiffusionSimulator::onClick(int x, int y)
