@@ -7,8 +7,8 @@ DiffusionSimulator::DiffusionSimulator()
 {
 	m_iTestCase = 0;
 	// TO-DO initialize with minimum values
-	m_fAlpha = 0.01;
-	m_fDeltaSpace = 0.01;
+	m_fAlpha = 0.001;
+	m_fDeltaSpace = 0.1;
 	m_iX = m_iNewX = 16;
 	m_iY = m_iNewY = 16;
 	m_iZ = m_iNewZ = 1;
@@ -36,8 +36,8 @@ void DiffusionSimulator::initUI(DrawingUtilitiesClass* DUC)
 	TwAddVarRW(DUC->g_pTweakBar, "Y", TW_TYPE_INT32, &m_iNewY, "min=16");
 	if (m_iTestCase > 1) // 3D implementation
 		TwAddVarRW(DUC->g_pTweakBar, "Z", TW_TYPE_INT32, &m_iNewZ, "min=1");
-	TwAddVarRW(DUC->g_pTweakBar, "Diffusion Coeficient", TW_TYPE_FLOAT, &m_fAlpha, "min=0.01 step=0.01");
-	TwAddVarRW(DUC->g_pTweakBar, "SpaceStep", TW_TYPE_FLOAT, &m_fDeltaSpace, "min=0.001 step=0.001");
+	TwAddVarRW(DUC->g_pTweakBar, "Diffusion Coeficient", TW_TYPE_FLOAT, &m_fAlpha, "min=0.001 step=0.001");
+	TwAddVarRW(DUC->g_pTweakBar, "SpaceStep", TW_TYPE_FLOAT, &m_fDeltaSpace, "min=0.01 step=0.001");
 }
 
 void DiffusionSimulator::notifyCaseChanged(int testCase)
@@ -79,7 +79,7 @@ void DiffusionSimulator::diffuseTemperatureExplicit(float timeStep)
 {
 	int i, j, k;
 	std::vector<float> new_T;
-	float factor = (m_fAlpha * timeStep) / (m_fDeltaSpace);
+	float factor = (m_fAlpha * timeStep) / (m_fDeltaSpace * m_fDeltaSpace);
 	for (int center = 0; center < T.size(); center++) {
 		std::tie(i, j, k) = idx(center);
 		if (isBoundary(i, j, k))
@@ -108,8 +108,8 @@ void DiffusionSimulator::setupT()
 	cout << "setT start" << endl;
 	T.clear();
 	m_fMaxValue = m_fMinValue = 0.0;
-	std::mt19937 eng;
-	std::uniform_real_distribution<float> randVal(-50.0, 50.0);
+	std::mt19937 eng(time(nullptr));
+	std::uniform_real_distribution<float> randVal(0, 500.0);
 	for (int i = 0; i < m_iX; i++)
 		for (int j = 0; j < m_iY; j++)
 			for (int k = 0; k < m_iZ; k++)
@@ -130,7 +130,7 @@ void DiffusionSimulator::setupT()
 //--------------------------------------------------------------------------------------
 // Fill vector T with T^(n+1) values from solved vector x of size X*Y*Z
 //--------------------------------------------------------------------------------------
-void DiffusionSimulator::fillT(std::vector<Real> x)
+void DiffusionSimulator::fillT(const std::vector<Real>& x)
 {
 	cout << "fillT start" << endl;
 	for (int i = 0; i < m_iX; i++)
@@ -159,8 +159,10 @@ void DiffusionSimulator::setupB(std::vector<Real>& b)
 	cout << "setB start" << endl;
 	for (int i = 0; i < m_iX; i++)
 		for (int j = 0; j < m_iY; j++)
-			for (int k = 0; k < m_iZ; k++)
-				b.push_back(T.at(idx(i, j, k)));
+			for (int k = 0; k < m_iZ; k++) {
+				int t_index = idx(i, j, k);
+				b.at(t_index) = T.at(t_index);
+			}
 	cout << "setB end" << endl;
 }
 
@@ -168,7 +170,7 @@ void DiffusionSimulator::setupB(std::vector<Real>& b)
 // Set up sparse matrix of size (X*Y*Z)x(X*Y*Z)
 // (emulates (XxYxZ)x(XxYxZ) matrix) with linear system's coefficients
 //--------------------------------------------------------------------------------------
-void DiffusionSimulator::setupA(SparseMatrix<Real>& A, double factor)
+void DiffusionSimulator::setupA(SparseMatrix<Real>& A,const double& factor)
 {
 	int center;
 	// avoid zero rows in A -> set the diagonal value for boundary cells to 1.0
@@ -205,10 +207,10 @@ void DiffusionSimulator::setupA(SparseMatrix<Real>& A, double factor)
 //--------------------------------------------------------------------------------------
 void DiffusionSimulator::diffuseTemperatureImplicit(float timeStep)
 {
-	float factor = (m_fAlpha * timeStep) / (m_fDeltaSpace);
+	float factor = (m_fAlpha * timeStep) / (m_fDeltaSpace * m_fDeltaSpace);
 	int N = m_iX * m_iY * m_iZ;
-	SparseMatrix<Real> A = SparseMatrix<Real>(N);
-	std::vector<Real> b = std::vector<Real>(N);
+	SparseMatrix<Real> A (N);
+	std::vector<Real> b (N);
 
 	setupA(A, factor);
 	setupB(b);
@@ -250,6 +252,16 @@ void DiffusionSimulator::simulateTimestep(float timeStep)
 	default:
 		break;
 	}
+
+	cout << "T";
+	for (int i = 0; i < m_iX; i++) {
+		for (int j = 0; j < m_iY; j++) {
+			cout << T.at(idx(i, j, 0)) << " ";
+		} 
+		cout << endl;
+	}
+
+	
 }
 
 //--------------------------------------------------------------------------------------
@@ -263,17 +275,15 @@ void DiffusionSimulator::drawFrame(ID3D11DeviceContext* pd3dImmediateContext)
 {
 	float sign;
 	Vec3 color;
+	cout << "draw" << endl;
 	for (int i = 0; i < m_iX; i++)
 		for (int j = 0; j < m_iY; j++)
 			for (int k = 0; k < m_iZ; k++)
 			{
-				if (isBoundary(i, j, k))
-					color = Vec3(0, 0, 0);
-				else
-				{
-					sign = T.at(idx(i, j, k)) > 0;
-					color = Vec3(getNormalValue(i, j, k), sign, sign);
-				}
+				sign = T.at(idx(i, j, k)) > 0;
+				float normal_val = getNormalValue(i,j,k);
+				color = Vec3(normal_val, normal_val, normal_val);
+			
 				DUC->setUpLighting(Vec3(), 0.4 * Vec3(1, 1, 1), 100, color);
 				DUC->drawSphere(Vec3(i, j, 0), 0.5 * Vec3(1, 1, 1));
 			}

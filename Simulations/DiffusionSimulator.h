@@ -28,8 +28,8 @@ public:
 	// Grid functions
 	void setupT();
 	void setupB(std::vector<Real>& b);
-	void setupA(SparseMatrix<Real>& A, double factor);
-	void fillT(std::vector<Real> x);
+	void setupA(SparseMatrix<Real>& A,const double& factor);
+	void fillT(const std::vector<Real>& x);
 
 	bool isBoundary(int i, int j, int k = 0) const
 	{
@@ -43,8 +43,8 @@ public:
 	//--------------------------------------------------------------------------------------
 	float idx(int i, int j, int k = 0) const
 	{
-		if (m_b3D) return i * m_iX * m_iY + j * m_iY + k;
-		return i * m_iX + j;
+		if (m_b3D) return i * m_iY * m_iZ + j * m_iZ + k;
+		return i * m_iY + j;
 		
 	};
 
@@ -55,7 +55,7 @@ public:
 	std::tuple<int, int, int> idx(int l) const
 	{
 		if (m_b3D) return std::make_tuple(l / (m_iX * m_iY), l % (m_iX * m_iY) / m_iY, l % (m_iX * m_iY) % m_iY);
-		return std::make_tuple(l / m_iX, l % m_iX, 0);
+		return std::make_tuple(l / m_iY, l % m_iY, 0);
 	}
 
 	float getNormalValue(int i, int j, int k = 0) const
