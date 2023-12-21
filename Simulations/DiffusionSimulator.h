@@ -31,19 +31,22 @@ public:
 	void setupA(SparseMatrix<Real>& A, double factor);
 	void fillT(std::vector<Real> x);
 
-	bool isBoundary(int i, int j) const
+	bool isBoundary(int i, int j, int k = 0) const
 	{
-		return (i == 0 || i == m_iX - 1 || j == 0 || j == m_iY - 1);
+		return (i == 0 || i == m_iX - 1 || j == 0 || j == m_iY - 1)
+				|| (m_b3D && (k == 0 || k == m_iZ - 1));
 	};
 
-	float idx(int i, int j) const
+	float idx(int i, int j, int k = 0) const
 	{
-		return i * m_iX + j;
+		if (m_b3D) return i * m_iX * m_iY + j * m_iY + k;
+		else return i * m_iX + j;
+		
 	};
 
-	float getNormalValue(int i, int j) const
+	float getNormalValue(int i, int j, int k = 0) const
 	{
-		return (T.at(idx(i, j)) - m_fMinValue) / (m_fMaxValue - m_fMinValue);
+		return (T.at(idx(i, j, k)) - m_fMinValue) / (m_fMaxValue - m_fMinValue);
 	};
 
 private:
@@ -53,6 +56,7 @@ private:
 	Point2D m_oldtrackmouse;
 
 	// Simulator attributes
+	bool m_b3D;
 	float m_fAlpha;
 	float m_fDeltaSpace;
 

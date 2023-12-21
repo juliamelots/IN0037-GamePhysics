@@ -30,6 +30,7 @@ void DiffusionSimulator::initUI(DrawingUtilitiesClass* DUC)
 {
 	this->DUC = DUC;
 	// TO-DO what should be the minimum values?
+	// dimension values used in real time, can't directly alter them
 	TwAddVarRW(DUC->g_pTweakBar, "X", TW_TYPE_INT32, &m_iNewX, "min=16");
 	TwAddVarRW(DUC->g_pTweakBar, "Y", TW_TYPE_INT32, &m_iNewY, "min=16");
 	if (m_iTestCase > 1) // 3D implementation
@@ -41,12 +42,15 @@ void DiffusionSimulator::initUI(DrawingUtilitiesClass* DUC)
 void DiffusionSimulator::notifyCaseChanged(int testCase)
 {
 	m_iTestCase = testCase;
+	// dimensions altered only if simulation was reset or case was changed
 	if (m_iNewX != m_iX || m_iNewY != m_iY || m_iNewZ != m_iZ)
 	{
 		m_iX = m_iNewX;
 		m_iY = m_iNewY;
 		m_iZ = m_iNewZ;
 	}
+	// 3D checks used in real time, altered only if case was changed
+	m_b3D = (m_iTestCase > 1);
 	setupT();
 	switch (m_iTestCase)
 	{
@@ -73,87 +77,126 @@ void DiffusionSimulator::diffuseTemperatureExplicit(float timeStep)
 }
 
 //--------------------------------------------------------------------------------------
-// Set up T as vector of size M*N (emulates MxN matrix)
+// Set up T as vector of size X*Y*Z (emulates XxYxZ matrix)
+// with zero in boundary cells and random numbers in others
 //--------------------------------------------------------------------------------------
 void DiffusionSimulator::setupT()
 {
-	T.clear();
 	cout << "setT start" << endl;
+	T.clear();
 	std::mt19937 eng;
 	std::uniform_real_distribution<float> randVal(-50.0, 50.0);
 	for (int i = 0; i < m_iX; i++)
 		for (int j = 0; j < m_iY; j++)
-		{
-			if (isBoundary(i, j))
-				T.push_back(0.0);
-			else
+			for (int k = 0; k < m_iZ; k++)
 			{
-				float new_value = randVal(eng);
-				cout << new_value << endl;
-				if (new_value > m_fMaxValue) m_fMaxValue = new_value;
-				if (new_value < m_fMinValue) m_fMinValue = new_value;
-				cout << m_fMaxValue << m_fMinValue << endl;
-				T.push_back(new_value);
+				if (isBoundary(i, j, k))
+					T.push_back(0.0);
+				else
+				{
+					float new_value = randVal(eng);
+					if (new_value > m_fMaxValue) m_fMaxValue = new_value;
+					if (new_value < m_fMinValue) m_fMinValue = new_value;
+					T.push_back(new_value);
+				}
 			}
-		}
 	cout << "setT end" << endl;
 }
 
 //--------------------------------------------------------------------------------------
-// Fill matrix T with T^(n+1) values from solved vector x of size M*N
+// Fill vector T with T^(n+1) values from solved vector x of size X*Y*Z
 //--------------------------------------------------------------------------------------
 void DiffusionSimulator::fillT(std::vector<Real> x)
 {
-	// make sure that the temperature in boundary cells stays zero
 	cout << "fillT start" << endl;
 	for (int i = 0; i < m_iX; i++)
 		for (int j = 0; j < m_iY; j++)
-		{
-			float new_value = x.at(idx(i, j));
-			if (new_value > m_fMaxValue) m_fMaxValue = new_value;
-			if (new_value < m_fMinValue) m_fMinValue = new_value;
-			T.at(idx(i, j)) = new_value;
-		}
+			for (int k = 0; k < m_iZ; k++)
+			{
+				// temperature in boundary cells stays zero
+				if (isBoundary(i, j, k))
+					T.at(idx(i, j, k)) = 0.0;
+				else
+				{
+					float new_value = x.at(idx(i, j, k));
+					if (new_value > m_fMaxValue) m_fMaxValue = new_value;
+					if (new_value < m_fMinValue) m_fMinValue = new_value;
+					T.at(idx(i, j, k)) = new_value;
+				}
+			}
 	cout << "fillT end" << endl;
 }
 
 //--------------------------------------------------------------------------------------
-// Set up vector of size M*N (emulates MxN matrix) with current T values
+// Set up vector of size X*Y*Z (emulates XxYxZ matrix) with T^n values
 //--------------------------------------------------------------------------------------
 void DiffusionSimulator::setupB(std::vector<Real>& b)
 {
 	cout << "setB start" << endl;
 	for (int i = 0; i < m_iX; i++)
 		for (int j = 0; j < m_iY; j++)
-			b.push_back(T.at(idx(i, j)));
+			for (int k = 0; k < m_iZ; k++)
+				b.push_back(T.at(idx(i, j, k)));
 	cout << "setB end" << endl;
 }
 
 //--------------------------------------------------------------------------------------
-// Set up sparse matrix of size (M*N)x(M*N)
-// (emulates (MxN)x(MxN) matrix) with linear system's coefficients
+// Set up sparse matrix of size (X*Y*Z)x(X*Y*Z)
+// (emulates (XxYxZ)x(XxYxZ) matrix) with linear system's coefficients
 //--------------------------------------------------------------------------------------
 void DiffusionSimulator::setupA(SparseMatrix<Real>& A, double factor)
 {
-	// avoid zero rows in A -> set the diagonal value for boundary cells to 1.0
-	cout << "setA start" << endl;
-	for (int i = 0; i < m_iX; i++)
-		for (int j = 0; j < m_iY; j++)
-		{
-			if (isBoundary(i, j))
-				A.set_element(idx(i, j), idx(i, j), 1 + 4 * factor);
-			else
+	int center;
+	if (m_b3D)
+	{
+		// avoid zero rows in A -> set the diagonal value for boundary cells to 1.0
+		cout << "setA 3D start" << endl;
+		for (int i = 0; i < m_iX; i++)
+			for (int j = 0; j < m_iY; j++)
+				for (int k = 0; k < m_iZ; k++)
+				{
+					center = idx(i, j, k);
+					if (isBoundary(i, j, k))
+						A.set_element(center, center, 1.0);
+					else
+					{
+						// A.set_element(linear access of element in T^n,
+						//  linear access of element in T^(n+1));
+						// TO-DO check if A elements are correct
+						A.set_element(center, center, 1 + 6 * factor); // TO-DO multiply by 6?
+						A.set_element(center, idx(i + 1, j, k), -factor);
+						A.set_element(center, idx(i - 1, j, k), -factor);
+						A.set_element(center, idx(i, j + 1, k), -factor);
+						A.set_element(center, idx(i, j - 1, k), -factor);
+						A.set_element(center, idx(i, j, k + 1), -factor);
+						A.set_element(center, idx(i, j, k - 1), -factor);
+					}
+				}
+		cout << "setA 3D end" << endl;
+	}
+	else
+	{
+		// avoid zero rows in A -> set the diagonal value for boundary cells to 1.0
+		cout << "setA 2D start" << endl;
+		for (int i = 0; i < m_iX; i++)
+			for (int j = 0; j < m_iY; j++)
 			{
-				// A.set_element(linear access of element in T^n,
-				//  linear access of element in T^(n+1));
-				A.set_element(idx(i, j), idx(i, j), 1 + 4 * factor);
-				A.set_element(idx(i, j), idx(i + 1, j), -factor);
-				A.set_element(idx(i, j), idx(i - 1, j), -factor);
-				A.set_element(idx(i, j), idx(i, j + 1), -factor);
-				A.set_element(idx(i, j), idx(i, j - 1), -factor);
+				center = idx(i, j);
+				if (isBoundary(i, j))
+					A.set_element(center, center, 1.0);
+				else
+				{
+					// A.set_element(linear access of element in T^n,
+					//  linear access of element in T^(n+1));
+					A.set_element(center, center, 1 + 4 * factor);
+					A.set_element(center, idx(i + 1, j), -factor);
+					A.set_element(center, idx(i - 1, j), -factor);
+					A.set_element(center, idx(i, j + 1), -factor);
+					A.set_element(center, idx(i, j - 1), -factor);
+				}
 			}
-		}
-	cout << "setA end" << endl;
+		cout << "setA 2D end" << endl;
+	}
 }
 
 //--------------------------------------------------------------------------------------
