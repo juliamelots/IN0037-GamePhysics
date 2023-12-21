@@ -74,6 +74,22 @@ void DiffusionSimulator::notifyCaseChanged(int testCase)
 
 void DiffusionSimulator::diffuseTemperatureExplicit(float timeStep)
 {
+	std::vector<float> new_T;
+	float r{ (m_fAlpha * timeStep) / (m_fDeltaSpace) };
+	for (int vector_idx = 0; vector_idx < T.size(); vector_idx++) {
+		int i, j, k;
+		std::tie(i, j, k) = space_idx(vector_idx);
+		if (isBoundary(i, j, k)) new_T.push_back(0);
+		else {
+			float new_value = T.at(vector_idx) + r * (T.at(idx(i + 1, j,k)) + T.at(idx(i, j + 1,k)) +
+				T.at(idx(i - 1, j,k)) + T.at(idx(i, j - 1,k)) - 4.0 * T.at(vector_idx));
+			if (m_b3D) {
+				new_value += r * (T.at(idx(i, j, k+1)) + T.at(idx(i, j, k - 1)) - 2.0 * T.at(vector_idx));
+			}
+			new_T.push_back(new_value);
+		}
+	}
+	T = new_T;
 }
 
 //--------------------------------------------------------------------------------------
@@ -204,6 +220,27 @@ void DiffusionSimulator::setupA(SparseMatrix<Real>& A, double factor)
 //--------------------------------------------------------------------------------------
 void DiffusionSimulator::diffuseTemperatureImplicit(float timeStep)
 {
+	float r{ (m_fAlpha * timeStep) / (m_fDeltaSpace) };
+	int N = m_iX * m_iY * m_iZ;
+	SparseMatrix<Real> A = SparseMatrix<Real>(N);
+	std::vector<Real> b = std::vector<Real>(N);
+
+	setupA(A, r);
+	setupB(b);
+
+	Real pcg_target_residual = 1e-05;
+	Real pcg_max_iterations = 1000;
+	Real ret_pcg_residual = 1e10;
+	int  ret_pcg_iterations = -1;
+
+	SparsePCGSolver<Real> solver;
+	solver.set_solver_parameters(pcg_target_residual, pcg_max_iterations, 0.97, 0.25);
+
+	std::vector<Real> x(N);
+	for (int j = 0; j < N; ++j) { x[j] = 0.; }
+
+	solver.solve(A, b, x, ret_pcg_residual, ret_pcg_iterations, 0);
+	fillT(x);
 }
 
 //--------------------------------------------------------------------------------------

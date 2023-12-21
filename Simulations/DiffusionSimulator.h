@@ -44,6 +44,11 @@ public:
 		
 	};
 
+	std::tuple<int, int, int> space_idx(int vector_idx) const {
+		if (m_b3D) return std::make_tuple(vector_idx / (m_iX * m_iY), vector_idx % (m_iX * m_iY) / m_iY, vector_idx % (m_iX * m_iY) % m_iY);
+		return std::make_tuple(vector_idx / m_iX, vector_idx % m_iX, 0);
+	}
+
 	float getNormalValue(int i, int j, int k = 0) const
 	{
 		return (T.at(idx(i, j, k)) - m_fMinValue) / (m_fMaxValue - m_fMinValue);
