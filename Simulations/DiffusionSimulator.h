@@ -37,16 +37,25 @@ public:
 				|| (m_b3D && (k == 0 || k == m_iZ - 1));
 	};
 
+	//--------------------------------------------------------------------------------------
+	// Calculates universal index to access vector of size X*Y*Z
+	// when given three dimension-specific indexes
+	//--------------------------------------------------------------------------------------
 	float idx(int i, int j, int k = 0) const
 	{
 		if (m_b3D) return i * m_iX * m_iY + j * m_iY + k;
-		else return i * m_iX + j;
+		return i * m_iX + j;
 		
 	};
 
-	std::tuple<int, int, int> space_idx(int vector_idx) const {
-		if (m_b3D) return std::make_tuple(vector_idx / (m_iX * m_iY), vector_idx % (m_iX * m_iY) / m_iY, vector_idx % (m_iX * m_iY) % m_iY);
-		return std::make_tuple(vector_idx / m_iX, vector_idx % m_iX, 0);
+	//--------------------------------------------------------------------------------------
+	// Calculates tuple of three dimension-specific indexes
+	// to access vector of size X*Y*Z when given universal index
+	//--------------------------------------------------------------------------------------
+	std::tuple<int, int, int> idx(int l) const
+	{
+		if (m_b3D) return std::make_tuple(l / (m_iX * m_iY), l % (m_iX * m_iY) / m_iY, l % (m_iX * m_iY) % m_iY);
+		return std::make_tuple(l / m_iX, l % m_iX, 0);
 	}
 
 	float getNormalValue(int i, int j, int k = 0) const
@@ -69,8 +78,8 @@ private:
 	int m_iNewX; int m_iX;
 	int m_iNewY; int m_iY;
 	int m_iNewZ; int m_iZ;
-	float m_fMaxValue = 0.0;
-	float m_fMinValue = 0.0;
+	float m_fMaxValue;
+	float m_fMinValue;
 	std::vector<float> T;
 };
 

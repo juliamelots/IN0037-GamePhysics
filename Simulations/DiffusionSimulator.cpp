@@ -9,9 +9,10 @@ DiffusionSimulator::DiffusionSimulator()
 	// TO-DO initialize with minimum values
 	m_fAlpha = 0.01;
 	m_fDeltaSpace = 0.01;
-	m_iX = 16;
-	m_iY = 16;
-	m_iZ = 1;
+	m_iX = m_iNewX = 16;
+	m_iY = m_iNewY = 16;
+	m_iZ = m_iNewZ = 1;
+	m_fMaxValue = m_fMinValue = 0.0;
 }
 
 const char* DiffusionSimulator::getTestCasesStr()
@@ -42,16 +43,6 @@ void DiffusionSimulator::initUI(DrawingUtilitiesClass* DUC)
 void DiffusionSimulator::notifyCaseChanged(int testCase)
 {
 	m_iTestCase = testCase;
-	// dimensions altered only if simulation was reset or case was changed
-	if (m_iNewX != m_iX || m_iNewY != m_iY || m_iNewZ != m_iZ)
-	{
-		m_iX = m_iNewX;
-		m_iY = m_iNewY;
-		m_iZ = m_iNewZ;
-	}
-	// 3D checks used in real time, altered only if case was changed
-	m_b3D = (m_iTestCase > 1);
-	setupT();
 	switch (m_iTestCase)
 	{
 	case 0:
@@ -62,30 +53,46 @@ void DiffusionSimulator::notifyCaseChanged(int testCase)
 		break;
 	case 2:
 		cout << "3D Explicit solver!\n";
+		if (!m_b3D) m_iZ = m_iNewZ = 16; // just changed from 2D to 3D, make 3rd dimension visible
 		break;
 	case 3:
 		cout << "3D Implicit solver!\n";
+		if (!m_b3D) m_iZ = m_iNewZ = 16; // just changed from 2D to 3D, make 3rd dimension visible
 		break;
 	default:
 		cout << "Empty Test!\n";
 		break;
 	}
+	// 3D checks used in real time, altered only if case was changed
+	m_b3D = (m_iTestCase > 1);
+	// dimensions altered only if simulation was reset or case was changed
+	if (m_iNewX != m_iX || m_iNewY != m_iY || m_iNewZ != m_iZ)
+	{
+		m_iX = m_iNewX;
+		m_iY = m_iNewY;
+		m_iZ = m_iNewZ;
+	}
+	setupT();
 }
 
 void DiffusionSimulator::diffuseTemperatureExplicit(float timeStep)
 {
+	int i, j, k;
 	std::vector<float> new_T;
-	float r{ (m_fAlpha * timeStep) / (m_fDeltaSpace) };
-	for (int vector_idx = 0; vector_idx < T.size(); vector_idx++) {
-		int i, j, k;
-		std::tie(i, j, k) = space_idx(vector_idx);
-		if (isBoundary(i, j, k)) new_T.push_back(0);
-		else {
-			float new_value = T.at(vector_idx) + r * (T.at(idx(i + 1, j,k)) + T.at(idx(i, j + 1,k)) +
-				T.at(idx(i - 1, j,k)) + T.at(idx(i, j - 1,k)) - 4.0 * T.at(vector_idx));
-			if (m_b3D) {
-				new_value += r * (T.at(idx(i, j, k+1)) + T.at(idx(i, j, k - 1)) - 2.0 * T.at(vector_idx));
-			}
+	float factor = (m_fAlpha * timeStep) / (m_fDeltaSpace);
+	for (int center = 0; center < T.size(); center++) {
+		std::tie(i, j, k) = idx(center);
+		if (isBoundary(i, j, k))
+			new_T.push_back(0.0);
+		else
+		{
+			float new_value = T.at(center) + factor *
+				(T.at(idx(i + 1, j, k)) + T.at(idx(i - 1, j, k))
+				+ T.at(idx(i, j + 1, k)) + T.at(idx(i, j - 1, k))
+				- 4.0 * T.at(center));
+			if (m_b3D)
+				new_value += factor * (T.at(idx(i, j, k+1)) + T.at(idx(i, j, k - 1))
+					- 2.0 * T.at(center));
 			new_T.push_back(new_value);
 		}
 	}
@@ -100,6 +107,7 @@ void DiffusionSimulator::setupT()
 {
 	cout << "setT start" << endl;
 	T.clear();
+	m_fMaxValue = m_fMinValue = 0.0;
 	std::mt19937 eng;
 	std::uniform_real_distribution<float> randVal(-50.0, 50.0);
 	for (int i = 0; i < m_iX; i++)
@@ -163,56 +171,33 @@ void DiffusionSimulator::setupB(std::vector<Real>& b)
 void DiffusionSimulator::setupA(SparseMatrix<Real>& A, double factor)
 {
 	int center;
-	if (m_b3D)
-	{
-		// avoid zero rows in A -> set the diagonal value for boundary cells to 1.0
-		cout << "setA 3D start" << endl;
-		for (int i = 0; i < m_iX; i++)
-			for (int j = 0; j < m_iY; j++)
-				for (int k = 0; k < m_iZ; k++)
-				{
-					center = idx(i, j, k);
-					if (isBoundary(i, j, k))
-						A.set_element(center, center, 1.0);
-					else
-					{
-						// A.set_element(linear access of element in T^n,
-						//  linear access of element in T^(n+1));
-						// TO-DO check if A elements are correct
-						A.set_element(center, center, 1 + 6 * factor); // TO-DO multiply by 6?
-						A.set_element(center, idx(i + 1, j, k), -factor);
-						A.set_element(center, idx(i - 1, j, k), -factor);
-						A.set_element(center, idx(i, j + 1, k), -factor);
-						A.set_element(center, idx(i, j - 1, k), -factor);
-						A.set_element(center, idx(i, j, k + 1), -factor);
-						A.set_element(center, idx(i, j, k - 1), -factor);
-					}
-				}
-		cout << "setA 3D end" << endl;
-	}
-	else
-	{
-		// avoid zero rows in A -> set the diagonal value for boundary cells to 1.0
-		cout << "setA 2D start" << endl;
-		for (int i = 0; i < m_iX; i++)
-			for (int j = 0; j < m_iY; j++)
+	// avoid zero rows in A -> set the diagonal value for boundary cells to 1.0
+	cout << "setA start" << endl;
+	for (int i = 0; i < m_iX; i++)
+		for (int j = 0; j < m_iY; j++)
+			for (int k = 0; k < m_iZ; k++)
 			{
-				center = idx(i, j);
-				if (isBoundary(i, j))
+				center = idx(i, j, k);
+				if (isBoundary(i, j, k))
 					A.set_element(center, center, 1.0);
 				else
 				{
 					// A.set_element(linear access of element in T^n,
 					//  linear access of element in T^(n+1));
 					A.set_element(center, center, 1 + 4 * factor);
-					A.set_element(center, idx(i + 1, j), -factor);
-					A.set_element(center, idx(i - 1, j), -factor);
-					A.set_element(center, idx(i, j + 1), -factor);
-					A.set_element(center, idx(i, j - 1), -factor);
+					A.set_element(center, idx(i + 1, j, k), -factor);
+					A.set_element(center, idx(i - 1, j, k), -factor);
+					A.set_element(center, idx(i, j + 1, k), -factor);
+					A.set_element(center, idx(i, j - 1, k), -factor);
+					if (m_b3D)
+					{
+						A.add_to_element(center, center, 2 * factor); // TO-DO factor multiplied by 6?
+						A.set_element(center, idx(i, j, k + 1), -factor);
+						A.set_element(center, idx(i, j, k - 1), -factor);
+					}
 				}
 			}
-		cout << "setA 2D end" << endl;
-	}
+	cout << "setA end" << endl;
 }
 
 //--------------------------------------------------------------------------------------
@@ -220,12 +205,12 @@ void DiffusionSimulator::setupA(SparseMatrix<Real>& A, double factor)
 //--------------------------------------------------------------------------------------
 void DiffusionSimulator::diffuseTemperatureImplicit(float timeStep)
 {
-	float r{ (m_fAlpha * timeStep) / (m_fDeltaSpace) };
+	float factor = (m_fAlpha * timeStep) / (m_fDeltaSpace);
 	int N = m_iX * m_iY * m_iZ;
 	SparseMatrix<Real> A = SparseMatrix<Real>(N);
 	std::vector<Real> b = std::vector<Real>(N);
 
-	setupA(A, r);
+	setupA(A, factor);
 	setupB(b);
 
 	Real pcg_target_residual = 1e-05;
@@ -256,11 +241,42 @@ void DiffusionSimulator::simulateTimestep(float timeStep)
 	case 1:
 		diffuseTemperatureImplicit(timeStep);
 		break;
+	case 2:
+		diffuseTemperatureExplicit(timeStep);
+		break;
+	case 3:
+		diffuseTemperatureImplicit(timeStep);
+		break;
+	default:
+		break;
 	}
 }
 
+//--------------------------------------------------------------------------------------
+// Draw current T^n state for each frame using colorful spheres
+// Color key:
+//	red (1,0,0) for negative values
+//	white (1,1,1) for positive ones
+//	black (0,0,0) for boundary cells
+//--------------------------------------------------------------------------------------
 void DiffusionSimulator::drawFrame(ID3D11DeviceContext* pd3dImmediateContext)
 {
+	float sign;
+	Vec3 color;
+	for (int i = 0; i < m_iX; i++)
+		for (int j = 0; j < m_iY; j++)
+			for (int k = 0; k < m_iZ; k++)
+			{
+				if (isBoundary(i, j, k))
+					color = Vec3(0, 0, 0);
+				else
+				{
+					sign = T.at(idx(i, j, k)) > 0;
+					color = Vec3(getNormalValue(i, j, k), sign, sign);
+				}
+				DUC->setUpLighting(Vec3(), 0.4 * Vec3(1, 1, 1), 100, color);
+				DUC->drawSphere(Vec3(i, j, 0), 0.5 * Vec3(1, 1, 1));
+			}
 }
 
 void DiffusionSimulator::onClick(int x, int y)
