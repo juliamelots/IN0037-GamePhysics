@@ -47,9 +47,13 @@ void DiffusionSimulator::notifyCaseChanged(int testCase)
 	{
 	case 0:
 		cout << "2D Explicit solver!\n";
+		m_iNewZ = 1;
+		m_iZ = 1;
 		break;
 	case 1:
 		cout << "2D Implicit solver!\n";
+		m_iNewZ = 1;
+		m_iZ = 1;
 		break;
 	case 2:
 		cout << "3D Explicit solver!\n";
@@ -298,7 +302,7 @@ void DiffusionSimulator::drawFrame(ID3D11DeviceContext* pd3dImmediateContext)
 					//cout << T.at(idx(i, j, k)) << " " << getNormalValue(i, j, k) << endl;
 				}
 				DUC->setUpLighting(Vec3(), 0.4 * Vec3(1, 1, 1), 100, color);
-				DUC->drawSphere(Vec3(i, j, 0), 0.5 * Vec3(1, 1, 1));
+				DUC->drawSphere(Vec3(i - m_iX / 2, j - m_iY/ 2, k - m_iZ / 2), 0.3 * Vec3(1, 1, 1));
 			}
 	//cout << "draw end" << endl;
 }
