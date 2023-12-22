@@ -58,9 +58,15 @@ public:
 		return std::make_tuple(l / m_iY, l % m_iY, 0);
 	}
 
-	float getNormalValue(int i, int j, int k = 0) const
+	float getNormalValue(int i, int j, int k = 0, float min_val = 0, float max_val = 1) const
 	{
-		return (T.at(idx(i, j, k)) - m_fMinValue) / (m_fMaxValue - m_fMinValue);
+		float t{ T.at(idx(i, j, k)) };
+		float f;
+		if (t > 0)
+			f =  (t - 0) / (m_fMaxValue);
+		else
+			f = (-t) / (-m_fMinValue);
+		return f * (max_val - min_val) + min_val;
 	};
 
 private:

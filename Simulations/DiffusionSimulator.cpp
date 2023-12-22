@@ -7,8 +7,8 @@ DiffusionSimulator::DiffusionSimulator()
 {
 	m_iTestCase = 0;
 	// TO-DO initialize with minimum values
-	m_fAlpha = 0.3;
-	m_fDeltaSpace = 0.01;
+	m_fAlpha = 0.001;
+	m_fDeltaSpace = 0.1;
 	m_iX = m_iNewX = 16;
 	m_iY = m_iNewY = 16;
 	m_iZ = m_iNewZ = 1;
@@ -36,7 +36,7 @@ void DiffusionSimulator::initUI(DrawingUtilitiesClass* DUC)
 	TwAddVarRW(DUC->g_pTweakBar, "Y", TW_TYPE_INT32, &m_iNewY, "min=16");
 	if (m_iTestCase > 1) // 3D implementation
 		TwAddVarRW(DUC->g_pTweakBar, "Z", TW_TYPE_INT32, &m_iNewZ, "min=1");
-	TwAddVarRW(DUC->g_pTweakBar, "Diffusion Coeficient", TW_TYPE_FLOAT, &m_fAlpha, "min=0.01 step=0.01");
+	TwAddVarRW(DUC->g_pTweakBar, "Diffusion Coeficient", TW_TYPE_FLOAT, &m_fAlpha, "min=0.001 step=0.001");
 	TwAddVarRW(DUC->g_pTweakBar, "SpaceStep", TW_TYPE_FLOAT, &m_fDeltaSpace, "min=0.001 step=0.001");
 }
 
@@ -105,11 +105,11 @@ void DiffusionSimulator::diffuseTemperatureExplicit(float timeStep)
 //--------------------------------------------------------------------------------------
 void DiffusionSimulator::setupT()
 {
-	cout << "setT start" << endl;
+	//cout << "setT start" << endl;
 	T.clear();
 	m_fMaxValue = m_fMinValue = 0.0;
 	std::mt19937 eng(time(nullptr));
-	std::uniform_real_distribution<float> randVal(0, 500.0);
+	std::uniform_real_distribution<float> randVal(-70, 70.0);
 	for (int i = 0; i < m_iX; i++)
 		for (int j = 0; j < m_iY; j++)
 			for (int k = 0; k < m_iZ; k++)
@@ -124,7 +124,7 @@ void DiffusionSimulator::setupT()
 					T.push_back(new_value);
 				}
 			}
-	cout << "setT end" << endl;
+	//cout << "setT end" << endl;
 }
 
 //--------------------------------------------------------------------------------------
@@ -132,8 +132,8 @@ void DiffusionSimulator::setupT()
 //--------------------------------------------------------------------------------------
 void DiffusionSimulator::fillT(const std::vector<Real>& x)
 {
-	cout << "fillT start" << endl;
-	m_fMaxValue = m_fMinValue = 0.0;
+	//cout << "fillT start" << endl;
+	//m_fMaxValue = m_fMinValue = 0.0;
 	for (int i = 0; i < m_iX; i++)
 		for (int j = 0; j < m_iY; j++)
 			for (int k = 0; k < m_iZ; k++)
@@ -144,12 +144,12 @@ void DiffusionSimulator::fillT(const std::vector<Real>& x)
 				else
 				{
 					float new_value = x.at(idx(i, j, k));
-					if (new_value > m_fMaxValue) m_fMaxValue = new_value;
-					if (new_value < m_fMinValue) m_fMinValue = new_value;
+					//if (new_value > m_fMaxValue) m_fMaxValue = new_value;
+					//if (new_value < m_fMinValue) m_fMinValue = new_value;
 					T.at(idx(i, j, k)) = new_value;
 				}
 			}
-	cout << "fillT end" << endl;
+	//cout << "fillT end" << endl;
 }
 
 //--------------------------------------------------------------------------------------
@@ -157,14 +157,14 @@ void DiffusionSimulator::fillT(const std::vector<Real>& x)
 //--------------------------------------------------------------------------------------
 void DiffusionSimulator::setupB(std::vector<Real>& b)
 {
-	cout << "setB start" << endl;
+	//cout << "setB start" << endl;
 	for (int i = 0; i < m_iX; i++)
 		for (int j = 0; j < m_iY; j++)
 			for (int k = 0; k < m_iZ; k++) {
 				int t_index = idx(i, j, k);
 				b.at(t_index) = T.at(t_index);
 			}
-	cout << "setB end" << endl;
+	//cout << "setB end" << endl;
 }
 
 //--------------------------------------------------------------------------------------
@@ -175,7 +175,7 @@ void DiffusionSimulator::setupA(SparseMatrix<Real>& A,const double& factor)
 {
 	int center;
 	// avoid zero rows in A -> set the diagonal value for boundary cells to 1.0
-	cout << "setA start" << endl;
+	//cout << "setA start" << endl;
 	for (int i = 0; i < m_iX; i++)
 		for (int j = 0; j < m_iY; j++)
 			for (int k = 0; k < m_iZ; k++)
@@ -200,7 +200,7 @@ void DiffusionSimulator::setupA(SparseMatrix<Real>& A,const double& factor)
 					}
 				}
 			}
-	cout << "setA end" << endl;
+	//cout << "setA end" << endl;
 }
 
 //--------------------------------------------------------------------------------------
@@ -254,13 +254,13 @@ void DiffusionSimulator::simulateTimestep(float timeStep)
 		break;
 	}
 
-	cout << "T";
-	for (int i = 0; i < m_iX; i++) {
-		for (int j = 0; j < m_iY; j++) {
-			cout << T.at(idx(i, j, 0)) << " ";
-		}
-		cout << endl;
-	}
+	//cout << "T";
+	//for (int i = 0; i < m_iX; i++) {
+		//for (int j = 0; j < m_iY; j++) {
+			//cout << T.at(idx(i, j, 0)) << " ";
+		//}
+		//cout << endl;
+	//}
 
 
 }
@@ -274,32 +274,33 @@ void DiffusionSimulator::simulateTimestep(float timeStep)
 //--------------------------------------------------------------------------------------
 void DiffusionSimulator::drawFrame(ID3D11DeviceContext* pd3dImmediateContext)
 {
-	cout << "draw start" << endl;
-	cout << "max " << m_fMaxValue << " min " << m_fMinValue << endl;
+	//cout << "draw start" << endl;
+	//cout << "max " << m_fMaxValue << " min " << m_fMinValue << endl;
 	float sign;
 	Vec3 color;
-	cout << "draw" << endl;
+	//cout << "draw" << endl;
 	for (int i = 0; i < m_iX; i++)
 		for (int j = 0; j < m_iY; j++)
 			for (int k = 0; k < m_iZ; k++)
 			{
 				if (isBoundary(i, j, k))
-					color = Vec3(0, 0, 0);
+					color = Vec3(0.05, 0.05, 0.05);
 				else
 				{
 					sign = T.at(idx(i, j, k)) > 0;
 					// sign portion only for debugging! needs to fix color
 					if (sign)
-						color = Vec3(0, getNormalValue(i, j, k), 0);
+						color = Vec3(0.05, getNormalValue(i, j, k, 0.05, 1), 0.05);
 					else
-						color = Vec3(getNormalValue(i, j, k), 0,0);
-					cout << i << " " << j << " " << k << " -> ";
-					cout << T.at(idx(i, j, k)) << " " << getNormalValue(i, j, k) << endl;
+						color = Vec3(getNormalValue(i, j, k, 0.05, 1), 0.05,0.05);
+				
+					//cout << i << " " << j << " " << k << " -> ";
+					//cout << T.at(idx(i, j, k)) << " " << getNormalValue(i, j, k) << endl;
 				}
 				DUC->setUpLighting(Vec3(), 0.4 * Vec3(1, 1, 1), 100, color);
 				DUC->drawSphere(Vec3(i, j, 0), 0.5 * Vec3(1, 1, 1));
 			}
-	cout << "draw end" << endl;
+	//cout << "draw end" << endl;
 }
 
 void DiffusionSimulator::onClick(int x, int y)
