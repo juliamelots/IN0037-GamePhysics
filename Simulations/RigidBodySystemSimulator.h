@@ -2,25 +2,56 @@
 #define RIGIDBODYSYSTEMSIMULATOR_h
 #include "Simulator.h"
 #include "collisionDetect.h"
+#include <vector>
 #define TESTCASEUSEDTORUNTEST 2
-
+#define FLOOR -1
+#define RADIUS 0.05f
 
 class RigidBody {
 public:
+	RigidBody() {
+		RigidBody(Vec3(0, 0, 0), Vec3(1, 1, 1), 1);
+	};
+
+	RigidBody(int inf) // Ground constructor
+	{
+		m_oldPosition = m_position = Vec3(0.0, -1.0, 0.0);
+		m_mass = static_cast<float>(inf);
+		m_isCollision = false;
+		m_rotation = Quat(0.0, 0.0, 0.0);
+		m_linearVelocity = Vec3();
+		m_angularVelocity = Vec3();
+		m_angularMomentum = Vec3();
+		m_torqueExternalForce = Vec3();
+		Mat4 initialIntertiaTensor = Mat4(
+			1, 0, 0, 0,
+			0, 1, 0, 0,
+			0, 0, 1, 0,
+			0, 0, 0, 1) * inf;
+		m_initialInverseIntertiaTensor = initialIntertiaTensor.inverse();
+		m_scaleMatrix.initScaling(inf, 1, inf);
+		m_translationMatrix.initTranslation(m_position.x, m_position.y, m_position.z);
+	};
+
 	RigidBody(Vec3 position, Vec3 size, int mass)
 	{
-		m_position = position;
 		m_mass = static_cast<float>(mass);
-		m_scaleMatrix.initScaling(size.x, size.y, size.z);
-		m_translationMatrix.initTranslation(m_position.x, m_position.y, m_position.z);
+		m_isCollision = false;
+		m_oldPosition = m_position = position;
+		m_rotation = Quat(0.0, 0.0, 0.0);
+		m_internalForce = Vec3();
+		m_linearVelocity = Vec3();
+		m_angularVelocity = Vec3();
+		m_angularMomentum = Vec3();
+		m_torqueExternalForce = Vec3();
 		Mat4 initialIntertiaTensor = Mat4(
 			(size.y * size.y + size.z * size.z), 0, 0, 0,
 			0, (size.x * size.x + size.z * size.z), 0, 0,
 			0, 0, (size.x * size.x + size.y * size.y), 0,
 			0, 0, 0, 1) * m_mass / 12.0f;
 		m_initialInverseIntertiaTensor = initialIntertiaTensor.inverse();
-
-		restoreOldPosition = false;
+		m_scaleMatrix.initScaling(size.x, size.y, size.z);
+		m_translationMatrix.initTranslation(m_position.x, m_position.y, m_position.z);
 	}
 
 	Vec3 getVelocityOfPosition(Vec3 point);
@@ -29,9 +60,11 @@ public:
 	Mat4 getlocalToWorldMat();
 
 	float m_mass;
+	bool m_isCollision;
 	Vec3 m_position;
 	Vec3 m_oldPosition;
 	Quat m_rotation;
+	Vec3 m_internalForce;
 	Vec3 m_linearVelocity;
 	Vec3 m_angularVelocity;
 	Vec3 m_angularMomentum;
@@ -39,8 +72,19 @@ public:
 	Mat4 m_initialInverseIntertiaTensor;
 	Mat4 m_scaleMatrix;
 	Mat4 m_translationMatrix;
+};
 
-	bool restoreOldPosition;
+class Spring {
+public:
+	// Constructors
+	Spring(int bodyIdx1, int bodyIdx2, float initialLength, float stiffness)
+		: bodyIdx1(bodyIdx1), bodyIdx2(bodyIdx2), m_fInitialLength(initialLength), m_fStiffness(stiffness) {}
+
+	// Data Attributes
+	int bodyIdx1;
+	int bodyIdx2;
+	float m_fStiffness;
+	float m_fInitialLength;
 };
 
 class RigidBodySystemSimulator:public Simulator{
@@ -59,6 +103,17 @@ public:
 	void onClick(int x, int y);
 	void onMouse(int x, int y);
 
+	// Mass spring related functions
+	void setDampingFactor(float damping);
+	float getCurrentLength(Spring spring);
+	void addSpring(int indexPoint1, int indexPoint2, float initialLength, float stiffness);
+	int getNumberOfSprings();
+	void removeSprings();
+	void addRandomSprings(int number);
+	void applyInternalForce(Spring spring);
+	Vec3 calculateNewPosition(Vec3 position, Vec3 velocity, float timeStep);
+	Vec3 calculateNewVelocity(Vec3 velocity, Vec3 internalForce, float timeStep, float mass);
+
 	// ExtraFunctions
 	int getNumberOfRigidBodies();
 	Vec3 getPositionOfRigidBody(int i);
@@ -75,8 +130,11 @@ private:
 	Vec3 m_externalForce;
 	Vec3 m_externalForcePosition;
 	vector<RigidBody> m_rigidBodies;
+	vector<Spring> m_vSprings;
 	float m_fCoefRestitution;
 	float m_fGravity;
+	float m_fDamping;
+	RigidBody m_ground = RigidBody(1000000000000);
 
 	// UI Attributes
 	Point2D m_mouse;
