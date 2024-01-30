@@ -164,7 +164,7 @@ void RigidBodySystemSimulator::simulateTimestep(float timeStep)
     {
         RigidBody& rigidBody_a = m_rigidBodies.at(i);
         Mat4 worldPosMat = rigidBody_a.getlocalToWorldMat();
-
+        rigidBody_a.m_internalForce = Vec3();
         // Collision between rigid bodies
         for (size_t j = 0; j < m_rigidBodies.size(); j++)
         {
