@@ -15,7 +15,7 @@ public:
 
 	RigidBody(int inf) // Ground constructor
 	{
-		m_oldPosition = m_position = Vec3(0.0, -1.0, 0.0);
+		m_oldPosition = m_position = Vec3(0.0, -51.0, 0.0);
 		m_mass = static_cast<float>(inf);
 		m_isCollision = false;
 		m_rotation = Quat(0.0, 0.0, 0.0);
@@ -29,7 +29,7 @@ public:
 			0, 0, 1, 0,
 			0, 0, 0, 1) * inf;
 		m_initialInverseIntertiaTensor = initialIntertiaTensor.inverse();
-		m_scaleMatrix.initScaling(inf, 1, inf);
+		m_scaleMatrix.initScaling(inf, 100, inf);
 		m_translationMatrix.initTranslation(m_position.x, m_position.y, m_position.z);
 	};
 
