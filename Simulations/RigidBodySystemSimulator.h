@@ -19,6 +19,7 @@ public:
 		m_mass = static_cast<float>(inf);
 		m_isCollision = false;
 		m_rotation = Quat(0.0, 0.0, 0.0);
+		m_internalForce = Vec3();
 		m_linearVelocity = Vec3();
 		m_angularVelocity = Vec3();
 		m_angularMomentum = Vec3();
@@ -104,26 +105,24 @@ public:
 	void onMouse(int x, int y);
 
 	// Mass spring related functions
-	void setDampingFactor(float damping);
-	float getCurrentLength(Spring spring);
 	void addSpring(int indexPoint1, int indexPoint2, float initialLength, float stiffness);
 	int getNumberOfSprings();
 	void removeSprings();
 	void addRandomSprings(int number);
+	void setDampingFactor(float damping);
+	float getCurrentLength(Spring spring);
 	void applyInternalForce(Spring spring);
-	Vec3 calculateNewPosition(Vec3 position, Vec3 velocity, float timeStep);
-	Vec3 calculateNewVelocity(Vec3 velocity, Vec3 internalForce, float timeStep, float mass);
 
-	// ExtraFunctions
+	// Rigid Body related functions
+	void addRigidBody(Vec3 position, Vec3 size, int mass);
 	int getNumberOfRigidBodies();
+	void removeRigidBodies();
+	void setOrientationOf(int i, Quat orientation);
+	void setVelocityOf(int i, Vec3 velocity);
 	Vec3 getPositionOfRigidBody(int i);
 	Vec3 getLinearVelocityOfRigidBody(int i);
 	Vec3 getAngularVelocityOfRigidBody(int i);
 	void applyForceOnBody(int i, Vec3 loc, Vec3 force);
-	void addRigidBody(Vec3 position, Vec3 size, int mass);
-	void setOrientationOf(int i, Quat orientation);
-	void setVelocityOf(int i, Vec3 velocity);
-	void removeRigidBodies();
 
 private:
 	// Attributes

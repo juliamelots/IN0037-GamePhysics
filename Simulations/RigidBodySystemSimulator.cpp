@@ -2,8 +2,8 @@
 
 RigidBodySystemSimulator::RigidBodySystemSimulator()
 {
-	m_iTestCase = 0;
-	m_externalForce = Vec3();
+    m_iTestCase = 0;
+    m_externalForce = Vec3();
     m_externalForcePosition = Vec3();
     m_fCoefRestitution = 0.5;
     m_fGravity = 9.8;
@@ -11,7 +11,7 @@ RigidBodySystemSimulator::RigidBodySystemSimulator()
 }
 
 const char* RigidBodySystemSimulator::getTestCasesStr() {
-	return "Demo1: One-Step, Demo2: Single-body, Demo3: Two-body, Demo4: Complex";
+    return "Demo 1: Simple,Demo 2: Complex";
 }
 
 void RigidBodySystemSimulator::initUI(DrawingUtilitiesClass* DUC)
@@ -47,62 +47,32 @@ void RigidBodySystemSimulator::drawFrame(ID3D11DeviceContext* pd3dImmediateConte
         DUC->drawLine(m_rigidBodies.at(spring.bodyIdx1).m_position, Vec3(0.5f, 0.5f, 0.5f),
             m_rigidBodies.at(spring.bodyIdx2).m_position, Vec3(0.5f, 0.5f, 0.5f));
     }
-    DUC->drawLine(Vec3(-1, 0, 0), Vec3(0.5f, 0.5f, 0.5f),
-        Vec3(1, 0, 0), Vec3(0.5f, 0.5f, 0.5f));
     DUC->endLine();
 }
 
 void RigidBodySystemSimulator::notifyCaseChanged(int testCase)
 {
     m_iTestCase = testCase;
+    removeSprings();
+    removeRigidBodies();
     switch (m_iTestCase) {
     case 0:
     {
-        cout << "Demo 1: A simple one-step test" << endl;
+        cout << "Demo 1: Simple" << endl;
 
         addRigidBody(Vec3(), Vec3(1.0, 0.6, 0.5), 2.0);
         setOrientationOf(0, Quat(0.0, 0.0, 0.5 * M_PI));
         applyForceOnBody(0, Vec3(0.3, 0.5, 0.25), Vec3(1, 1, 0));
-        simulateTimestep(2);
 
-        cout << "Demo 1 results:\n\tPosition: " << m_rigidBodies[0].m_position << endl;
-        cout << "\tCM Linear velocity: " << m_rigidBodies[0].m_linearVelocity << endl;
-        cout << "\tCM Angular veloctiy: " << m_rigidBodies[0].m_angularVelocity << endl;
-        cout << "\tCM World velocity of  (0.3, 0.5, 0.25): " << m_rigidBodies[0].getVelocityOfPosition(Vec3(0.3, 0.5, 0.25)) << endl;
+        addRigidBody(Vec3(1.2, 1.0, 0.5), Vec3(1.0, 0.6, 0.5), 2.0);
+        setOrientationOf(0, Quat(0.0, 0.0, 0.5 * M_PI));
+
+        //addSpring(0, 1, 1.0, 1.0);
         break;
     }
     case 1:
     {
-        cout << "Demo 3: Simple collision simulation" << endl;
-        removeSprings();
-        removeRigidBodies();
-        addRigidBody(Vec3(), Vec3(1.0, 0.6, 0.5), 2.0);
-        setOrientationOf(0, Quat(0.0, 0.0, 0.5 * M_PI));
-        applyForceOnBody(0, Vec3(0.3, 0.5, 0.25), Vec3(1, 1, 0));
-        simulateTimestep(0.01);
-        break;
-    }
-    case 2:
-    {
-        cout << "Demo 3: Simple collision simulation" << endl;
-
-        removeRigidBodies();
-        addRigidBody(Vec3(0.0, 0.5, 0.0), Vec3(1.0, 0.6, 0.5), 2.0);
-        setOrientationOf(0, Quat(0.0, 0.0, 0.0));
-        setVelocityOf(0, Vec3(0.0, 1.0, 0.0));
-
-        addRigidBody(Vec3(0.0, 2.0, 0.0), Vec3(1.0, 0.6, 0.5), 2.0);
-        setOrientationOf(1, Quat(30.0 / 180.0 * M_PI, 30.0 / 180.0 * M_PI, 45.0 / 180.0 * M_PI, 0));
-        setVelocityOf(1, Vec3(0.0, -1.0, 0.0));
-        
-        removeSprings();
-        break;
-    }
-    case 3:
-    {
-        cout << "Demo 4: Complex simulation" << endl;
-        removeSprings();
-        removeRigidBodies();
+        cout << "Demo 2: Complex" << endl;
 
         addRigidBody(Vec3(0.0, 0.5, 0.0), Vec3(1.0, 0.6, 0.5), 2.0);
         setOrientationOf(0, Quat(0.0, 0.0, 0.0));
@@ -150,9 +120,7 @@ void RigidBodySystemSimulator::externalForcesCalculations(float timeElapsed)
 
     // Gravity
     Vec3 gravityForce = Vec3();
-    gravityForce = Vec3(0, -m_fGravity, 0);
-    // if (m_iTestCase == 3)
-        // gravityForce = Vec3(0, -m_fGravity, 0);
+    //gravityForce = Vec3(0, -m_fGravity, 0);
 
     m_externalForce = gravityForce + inputForce;
 }
@@ -164,7 +132,7 @@ void RigidBodySystemSimulator::simulateTimestep(float timeStep)
     {
         RigidBody& rigidBody_a = m_rigidBodies.at(i);
         Mat4 worldPosMat = rigidBody_a.getlocalToWorldMat();
-        rigidBody_a.m_internalForce = Vec3();
+
         // Collision between rigid bodies
         for (size_t j = 0; j < m_rigidBodies.size(); j++)
         {
@@ -223,23 +191,21 @@ void RigidBodySystemSimulator::simulateTimestep(float timeStep)
 
     for (RigidBody& rigidBody : m_rigidBodies) {
         // Position update
-        
-        if (!rigidBody.m_isCollision) {
-            rigidBody.m_oldPosition = rigidBody.m_position;
-            rigidBody.m_position += timeStep * rigidBody.m_linearVelocity;
-        }
-        else { 
-            rigidBody.m_position = rigidBody.m_oldPosition; 
-        }
+        //if (!rigidBody.m_isCollision) {
+        //    rigidBody.m_oldPosition = rigidBody.m_position;
+        //    rigidBody.m_position += timeStep * rigidBody.m_linearVelocity;
+        //}
+        //else
+        //    rigidBody.m_position = rigidBody.m_oldPosition;
+        rigidBody.m_position += timeStep * rigidBody.m_linearVelocity;
         rigidBody.m_translationMatrix.initTranslation(rigidBody.m_position.x, rigidBody.m_position.y, rigidBody.m_position.z);
-        
-        // Linear velocity update
-        Vec3 aggregatedInternalForce = rigidBody.m_internalForce - m_fDamping * rigidBody.m_linearVelocity;
-        // Vec3 aggregatedInternalForce = rigidBody.m_internalForce *(1 - m_fDamping * dot(rigidBody.m_linearVelocity, rigidBody.m_internalForce) / (norm(rigidBody.m_internalForce) * norm(rigidBody.m_internalForce)));
-        if (!(rigidBody.m_internalForce.x == 0 && rigidBody.m_internalForce.y == 0 && rigidBody.m_internalForce.z == 0)) {
-            cout << rigidBody.m_internalForce << endl;
-        }
-        rigidBody.m_linearVelocity += timeStep * (m_externalForce + aggregatedInternalForce) / rigidBody.m_mass;
+
+        // Linear velocity updade
+        //if (!(rigidBody.m_internalForce.x == 0 && rigidBody.m_internalForce.y == 0 && rigidBody.m_internalForce.z == 0))
+        //    cout << rigidBody.m_internalForce << endl;
+
+        Vec3 totalForceOverBody = m_externalForce + rigidBody.m_internalForce - m_fDamping * rigidBody.m_linearVelocity;
+        rigidBody.m_linearVelocity += timeStep * totalForceOverBody / rigidBody.m_mass;
 
         // Angular velocity and rotation update
         rigidBody.m_rotation += (timeStep / 2.0) * Quat(rigidBody.m_angularVelocity.x, rigidBody.m_angularVelocity.y, rigidBody.m_angularVelocity.z, 0) * rigidBody.m_rotation;
@@ -252,6 +218,8 @@ void RigidBodySystemSimulator::simulateTimestep(float timeStep)
         rigidBody.m_angularVelocity = inverseInertiaTensor.transformVector(rigidBody.m_angularMomentum);
         //cout << "linear velocity: " << rigidBody.m_linearVelocity << endl;
         //cout << "angular velocity: " << rigidBody.m_angularVelocity << endl;
+
+        rigidBody.m_internalForce = Vec3(); // reset internal force
     }
 }
 
@@ -269,10 +237,36 @@ void RigidBodySystemSimulator::onMouse(int x, int y)
     m_trackmouse.y = y;
 }
 
+// Rigid Body System related functions
+
+void RigidBodySystemSimulator::addRigidBody(Vec3 position, Vec3 size, int mass)
+{
+    m_rigidBodies.push_back(RigidBody(position, size, mass));
+}
+
 int RigidBodySystemSimulator::getNumberOfRigidBodies()
 {
     return m_rigidBodies.size();
 }
+
+void RigidBodySystemSimulator::removeRigidBodies()
+{
+    m_rigidBodies.clear();
+    m_rigidBodies.shrink_to_fit();
+}
+
+void RigidBodySystemSimulator::setOrientationOf(int i, Quat orientation)
+{
+    RigidBody& rigidBody = m_rigidBodies.at(i);
+    rigidBody.m_rotation = orientation;
+}
+
+void RigidBodySystemSimulator::setVelocityOf(int i, Vec3 velocity)
+{
+    RigidBody& rigidBody = m_rigidBodies.at(i);
+    rigidBody.m_linearVelocity = velocity;
+}
+
 
 Vec3 RigidBodySystemSimulator::getPositionOfRigidBody(int i)
 {
@@ -299,34 +293,34 @@ void RigidBodySystemSimulator::applyForceOnBody(int i, Vec3 loc, Vec3 force)
     m_externalForce += force;
 }
 
-void RigidBodySystemSimulator::addRigidBody(Vec3 position, Vec3 size, int mass)
+
+// Rigid Body related functions
+
+Vec3 RigidBody::getVelocityOfPosition(Vec3 pos)
 {
-    m_rigidBodies.push_back(RigidBody(position, size, mass));
+    return m_linearVelocity + cross(m_angularVelocity, pos);
 }
 
-void RigidBodySystemSimulator::setOrientationOf(int i, Quat orientation)
+Vec3 RigidBody::getWorldPositionOfPoint(Vec3 pos)
 {
-    RigidBody& rigidBody = m_rigidBodies.at(i);
-    rigidBody.m_rotation = orientation;
+    return m_position + m_rotation.getRotMat().transformVector(pos);
 }
 
-void RigidBodySystemSimulator::setVelocityOf(int i, Vec3 velocity)
+Mat4 RigidBody::getInverseIntertiaTensor()
 {
-    RigidBody& rigidBody = m_rigidBodies.at(i);
-    rigidBody.m_linearVelocity = velocity;
+    auto rotMat = m_rotation.getRotMat();
+    auto inverseRotMat = m_rotation.getRotMat();
+    inverseRotMat.transpose();
+    auto newInverseI = (rotMat * m_initialInverseIntertiaTensor) * inverseRotMat;
+    return newInverseI;
 }
 
-void RigidBodySystemSimulator::removeRigidBodies()
+Mat4 RigidBody::getlocalToWorldMat()
 {
-    m_rigidBodies.clear();
-    m_rigidBodies.shrink_to_fit();
+    return m_scaleMatrix * m_rotation.getRotMat() * m_translationMatrix;
 }
 
-void RigidBodySystemSimulator::setDampingFactor(float damping)
-{
-    m_fDamping = damping;
-}
-
+// Spring System related functions
 
 void RigidBodySystemSimulator::addSpring(int index1, int index2, float initialLength, float stiffness)
 {
@@ -338,7 +332,8 @@ int RigidBodySystemSimulator::getNumberOfSprings()
     return m_vSprings.size();
 }
 
-void RigidBodySystemSimulator::removeSprings() {
+void RigidBodySystemSimulator::removeSprings()
+{
     m_vSprings.clear();
     m_vSprings.shrink_to_fit();
 }
@@ -357,58 +352,27 @@ void RigidBodySystemSimulator::addRandomSprings(int number)
     }
 }
 
-//--------------------------------------------------------------------------------------
-// Check collision of mass points and (maybe) the floor
-//--------------------------------------------------------------------------------------
+void RigidBodySystemSimulator::setDampingFactor(float damping)
+{
+    m_fDamping = damping;
+}
 
+float RigidBodySystemSimulator::getCurrentLength(Spring spring)
+{
+    return norm(m_rigidBodies.at(spring.bodyIdx1).m_position - m_rigidBodies.at(spring.bodyIdx2).m_position);
+}
+
+//--------------------------------------------------------------------------------------
+// Calculate and apply internal force of spring to its endpoints
+//--------------------------------------------------------------------------------------
 void RigidBodySystemSimulator::applyInternalForce(Spring spring)
 {
     float currentLengthOfString = getCurrentLength(spring);
     float springTerm = -spring.m_fStiffness
         * (currentLengthOfString - spring.m_fInitialLength)
         / currentLengthOfString;
-    m_rigidBodies.at(spring.bodyIdx1).m_internalForce += springTerm * (m_rigidBodies.at(spring.bodyIdx1).m_position - m_rigidBodies.at(spring.bodyIdx2).m_position);
-    m_rigidBodies.at(spring.bodyIdx2).m_internalForce += springTerm * (m_rigidBodies.at(spring.bodyIdx2).m_position - m_rigidBodies.at(spring.bodyIdx1).m_position);
-}
-
-float RigidBodySystemSimulator::getCurrentLength(Spring spring) {
-    return norm(m_rigidBodies.at(spring.bodyIdx1).m_position - m_rigidBodies.at(spring.bodyIdx2).m_position);
-};
-
-Vec3 RigidBodySystemSimulator::calculateNewPosition(Vec3 position, Vec3 velocity, float timeStep)
-{
-    return position + timeStep * velocity;
-}
-
-//--------------------------------------------------------------------------------------
-// Calculate new velocity after time step using accerelation as derivative
-//--------------------------------------------------------------------------------------
-Vec3 RigidBodySystemSimulator::calculateNewVelocity(Vec3 velocity, Vec3 internalForce, float timeStep, float mass)
-{
-    Vec3 acceleration = (internalForce + Vec3(0, -m_fGravity, 0) - m_fDamping * velocity) / mass;
-    return velocity + timeStep * acceleration;
-}
-
-Vec3 RigidBody::getVelocityOfPosition(Vec3 pos)
-{
-	return m_linearVelocity + cross(m_angularVelocity, pos);
-}
-
-Vec3 RigidBody::getWorldPositionOfPoint(Vec3 pos)
-{
-    return m_position + m_rotation.getRotMat().transformVector(pos);
-}
-
-Mat4 RigidBody::getInverseIntertiaTensor()
-{
-	auto rotMat = m_rotation.getRotMat();
-	auto inverseRotMat = m_rotation.getRotMat();
-	inverseRotMat.transpose();
-	auto newInverseI = (rotMat * m_initialInverseIntertiaTensor) * inverseRotMat;
-	return newInverseI;
-}
-
-Mat4 RigidBody::getlocalToWorldMat()
-{
-	return m_scaleMatrix * m_rotation.getRotMat() * m_translationMatrix;
+    RigidBody& body1 = m_rigidBodies.at(spring.bodyIdx1);
+    RigidBody& body2 = m_rigidBodies.at(spring.bodyIdx2);
+    body1.m_internalForce += springTerm * (body1.m_position - body2.m_position);
+    body2.m_internalForce += springTerm * (body2.m_position - body1.m_position);
 }
