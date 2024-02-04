@@ -11,7 +11,7 @@ RigidBodySystemSimulator::RigidBodySystemSimulator()
 }
 
 const char* RigidBodySystemSimulator::getTestCasesStr() {
-    return "Demo 1: Simple,Demo 2: Complex";
+    return "Demo 1: Simple,Demo 2: Complex,Demo 3: Net,Demo 4: Custom Net";
 }
 
 void RigidBodySystemSimulator::initUI(DrawingUtilitiesClass* DUC)
@@ -62,12 +62,13 @@ void RigidBodySystemSimulator::notifyCaseChanged(int testCase)
 
         addRigidBody(Vec3(), Vec3(1.0, 0.6, 0.5), 2.0);
         setOrientationOf(0, Quat(0.0, 0.0, 0.5 * M_PI));
-        applyForceOnBody(0, Vec3(0.3, 0.5, 0.25), Vec3(1, 1, 0));
+        setVelocityOf(0, Vec3(0.0, 1.0, 0.0));
 
-        addRigidBody(Vec3(1.2, 1.0, 0.5), Vec3(1.0, 0.6, 0.5), 2.0);
-        setOrientationOf(0, Quat(0.0, 0.0, 0.5 * M_PI));
+        addRigidBody(Vec3(1.2, 1.0, 0.5), Vec3(0.4, 1.0, 0.5), 1.0);
+        setOrientationOf(1, Quat(0.0, 0.0, -0.5 * M_PI));
+        setVelocityOf(1, Vec3(0.0, -1.0, 0.0));
 
-        //addSpring(0, 1, 1.0, 1.0);
+        addSpring(0, 1, 1.0, 40.0);
         break;
     }
     case 1:
@@ -90,9 +91,94 @@ void RigidBodySystemSimulator::notifyCaseChanged(int testCase)
         setOrientationOf(3, Quat(40.0 / 180.0 * M_PI, 40.0 / 180.0 * M_PI, 45.0 / 180.0 * M_PI, 0));
         setVelocityOf(3, Vec3(0.0, -0.3f, 0.0));
 
-        addSpring(0, 1, 1.0, 1.0);
+        addSpring(0, 1, 1.0, 40.0);
         break;
     }
+    case 2:
+    {
+        cout << "Demo 3: Custom Net" << endl;
+        int net = 4;
+        Vec3 center = Vec3(0.0, 2.0, 0.0);
+        Vec3 size = Vec3(0.5, 0.5, 0.5);
+        float length = 1.0;
+        addRigidBody(center, size, 2.0);
+        setOrientationOf(0, Quat(0.0, 0.0, 0.0));
+
+        for (int i = 0; i < net/4; i++)
+        {
+            int offset = i * 4;
+            addRigidBody(center + Vec3(0.0, length * i, 0.0), size, 2.0);
+            setOrientationOf(1 + offset, Quat(0.0, 0.0, 0.0));
+
+            addRigidBody(center + Vec3(length * i, 0.0, 0.0), size, 2.0);
+            setOrientationOf(2 + offset, Quat(0.0, 0.0, 0.0));
+
+            addRigidBody(center + Vec3(0.0, -length * i, 0.0), size, 2.0);
+            setOrientationOf(3 + offset, Quat(0.0, 0.0, 0.0));
+
+            addRigidBody(center + Vec3(-length * i, 0.0, 0.0), size, 2.0);
+            setOrientationOf(4 + offset, Quat(0.0, 0.0, 0.0));
+            cout << "added rb" << endl;
+            addSpring(1 + offset, 2 + offset, length * i, 40.0);
+            addSpring(2 + offset, 3 + offset, length * i, 40.0);
+            addSpring(3 + offset, 4 + offset, length * i, 40.0);
+            addSpring(4 + offset, 1 + offset, length * i, 40.0);
+            cout << "added s1" << endl;
+
+            if (i > 0)
+            {
+                addSpring(1 + offset, 1 + offset  -  4, length, 40.0);
+                addSpring(2 + offset, 2 + offset  -  4, length, 40.0);
+                addSpring(3 + offset, 3 + offset  -  4, length, 40.0);
+                addSpring(4 + offset, 4 + offset  -  4, length, 40.0);
+            }
+            else
+            {
+                addSpring(1 + offset, 0, length, 40.0);
+                addSpring(2 + offset, 0, length, 40.0);
+                addSpring(3 + offset, 0, length, 40.0);
+                addSpring(4 + offset, 0, length, 40.0);
+                cout << "added s2" << endl;
+            }
+        }
+        break;
+    }
+    //case 2:
+    //{
+    //    cout << "Demo 3: Net" << endl;
+    //    Vec3 center = Vec3(0.0, 2.0, 0.0);
+    //    Vec3 size = Vec3(0.5, 0.5, 0.5);
+    //    float length = 1.0;
+    //    addRigidBody(center, size, 2.0);
+    //    setOrientationOf(0, Quat(0.0, 0.0, 0.0));
+    //    setVelocityOf(0, Vec3(0.0, 0.1f, 0.0));
+
+    //    addRigidBody(center + Vec3(0.0, length, 0.0), size, 2.0);
+    //    setOrientationOf(1, Quat(0.0, 0.0, 0.0));
+    //    setVelocityOf(1, Vec3(0.0, -0.1f, 0.0));
+
+    //    addRigidBody(center + Vec3(length, 0.0, 0.0), size, 2.0);
+    //    setOrientationOf(2, Quat(0.0, 0.0, 0.0));
+    //    setVelocityOf(2, Vec3(0.0, -0.2f, 0.0));
+
+    //    addRigidBody(center + Vec3(0.0, -length, 0.0), size, 2.0);
+    //    setOrientationOf(3, Quat(0.0, 0.0, 0.0));
+    //    setVelocityOf(3, Vec3(0.0, -0.3f, 0.0));
+
+    //    addRigidBody(center + Vec3(-length, 0.0, 0.0), size, 2.0);
+    //    setOrientationOf(4, Quat(0.0, 0.0, 0.0));
+    //    setVelocityOf(4, Vec3(0.0, -0.3f, 0.0));
+
+    //    addSpring(0, 1, length, 40.0);
+    //    addSpring(0, 2, length, 40.0);
+    //    addSpring(0, 3, length, 40.0);
+    //    addSpring(0, 4, length, 40.0);
+    //    addSpring(1, 2, length, 40.0);
+    //    addSpring(2, 3, length, 40.0);
+    //    addSpring(3, 4, length, 40.0);
+    //    addSpring(4, 1, length, 40.0);
+    //    break;
+    //}
     }
 }
 
@@ -120,7 +206,7 @@ void RigidBodySystemSimulator::externalForcesCalculations(float timeElapsed)
 
     // Gravity
     Vec3 gravityForce = Vec3();
-    //gravityForce = Vec3(0, -m_fGravity, 0);
+    gravityForce = Vec3(0, -m_fGravity, 0);
 
     m_externalForce = gravityForce + inputForce;
 }
@@ -191,18 +277,14 @@ void RigidBodySystemSimulator::simulateTimestep(float timeStep)
 
     for (RigidBody& rigidBody : m_rigidBodies) {
         // Position update
-        //if (!rigidBody.m_isCollision) {
-        //    rigidBody.m_oldPosition = rigidBody.m_position;
-        //    rigidBody.m_position += timeStep * rigidBody.m_linearVelocity;
-        //}
-        //else
-        //    rigidBody.m_position = rigidBody.m_oldPosition;
-        rigidBody.m_position += timeStep * rigidBody.m_linearVelocity;
+        if (!rigidBody.m_isCollision)
+        {
+            rigidBody.m_oldPosition = rigidBody.m_position;
+            rigidBody.m_position += timeStep * rigidBody.m_linearVelocity;
+        }
+        else
+            rigidBody.m_position = rigidBody.m_oldPosition;
         rigidBody.m_translationMatrix.initTranslation(rigidBody.m_position.x, rigidBody.m_position.y, rigidBody.m_position.z);
-
-        // Linear velocity updade
-        //if (!(rigidBody.m_internalForce.x == 0 && rigidBody.m_internalForce.y == 0 && rigidBody.m_internalForce.z == 0))
-        //    cout << rigidBody.m_internalForce << endl;
 
         Vec3 totalForceOverBody = m_externalForce + rigidBody.m_internalForce - m_fDamping * rigidBody.m_linearVelocity;
         rigidBody.m_linearVelocity += timeStep * totalForceOverBody / rigidBody.m_mass;
