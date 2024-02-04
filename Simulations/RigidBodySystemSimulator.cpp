@@ -12,7 +12,7 @@ RigidBodySystemSimulator::RigidBodySystemSimulator()
 }
 
 const char* RigidBodySystemSimulator::getTestCasesStr() {
-    return "Demo 1: Simple,Demo 2: Complex,Demo 3: Custom Net";
+    return "Demo 1: Simple,Demo 2: Complex,Demo 3: Custom Net,Demo 4: Capture Net";
 }
 
 void RigidBodySystemSimulator::initUI(DrawingUtilitiesClass* DUC)
@@ -21,7 +21,7 @@ void RigidBodySystemSimulator::initUI(DrawingUtilitiesClass* DUC)
     TwAddVarRW(DUC->g_pTweakBar, "Coefficient of Restitution", TW_TYPE_FLOAT, &m_fCoefRestitution, "step=0.1 min=0.0 max=1.0");
     TwAddVarRW(DUC->g_pTweakBar, "Gravity", TW_TYPE_FLOAT, &m_fGravity, "step=0.1 min=0.0");
     TwAddVarRW(DUC->g_pTweakBar, "Damping", TW_TYPE_FLOAT, &m_fDamping, "step=0.1 min=0.0");
-    if (m_iTestCase == 2)
+    if (m_iTestCase >= 2)
         TwAddVarRW(DUC->g_pTweakBar, "Web Size", TW_TYPE_INT32, &m_iWebSize, "step=4 min=4");
 }
 
@@ -100,12 +100,12 @@ void RigidBodySystemSimulator::notifyCaseChanged(int testCase)
         cout << "Demo 3: Custom Net" << endl;
 
         Vec3 webCenter = Vec3(0.0, 2.0, 0.0);
-        Vec3 webSize = Vec3(0.5, 0.5, 0.5);
+        Vec3 webParticle = Vec3(0.5, 0.5, 0.5);
         float webBaseLength = 1.0;
 
-        addRigidBody(webCenter, webSize, 2.0);
+        addRigidBody(webCenter, webParticle, 2.0);
         setOrientationOf(0, Quat(0.0, 0.0, 0.0));
-        setVelocityOf(0, Vec3(0.3, -8, 10.0));
+        setVelocityOf(0, Vec3(5.0, -8.0, 10.0));
 
         for (int i = 0; i < m_iWebSize / 4; i++)
         {
@@ -113,16 +113,16 @@ void RigidBodySystemSimulator::notifyCaseChanged(int testCase)
             float tierLength = webBaseLength * (i + 1);
 
             // Create current tier
-            addRigidBody(webCenter + Vec3(0.0, tierLength, 0.0), webSize, 2.0);
+            addRigidBody(webCenter + Vec3(0.0, tierLength, 0.0), webParticle, 2.0);
             setOrientationOf(1 + offset, Quat(0.0, 0.0, 0.0));
 
-            addRigidBody(webCenter + Vec3(tierLength, 0.0, 0.0), webSize, 2.0);
+            addRigidBody(webCenter + Vec3(tierLength, 0.0, 0.0), webParticle, 2.0);
             setOrientationOf(2 + offset, Quat(0.0, 0.0, 0.0));
 
-            addRigidBody(webCenter + Vec3(0.0, -tierLength, 0.0), webSize, 2.0);
+            addRigidBody(webCenter + Vec3(0.0, -tierLength, 0.0), webParticle, 2.0);
             setOrientationOf(3 + offset, Quat(0.0, 0.0, 0.0));
 
-            addRigidBody(webCenter + Vec3(-tierLength, 0.0, 0.0), webSize, 2.0);
+            addRigidBody(webCenter + Vec3(-tierLength, 0.0, 0.0), webParticle, 2.0);
             setOrientationOf(4 + offset, Quat(0.0, 0.0, 0.0));
 
             addSpring(1 + offset, 2 + offset, tierLength, 40.0);
@@ -146,6 +146,61 @@ void RigidBodySystemSimulator::notifyCaseChanged(int testCase)
                 addSpring(4, 0, webBaseLength, 40.0);
             }
         }
+        break;
+    }
+    case 3:
+    {
+        cout << "Demo 4: Capture Net" << endl;
+
+        Vec3 webCenter = Vec3(0.0, 2.0, 0.0);
+        Vec3 webParticle = Vec3(0.5, 0.5, 0.5);
+        float webBaseLength = 1.0;
+
+        addRigidBody(webCenter, webParticle, 2.0);
+        setOrientationOf(0, Quat(0.0, 0.0, 0.0));
+        setVelocityOf(0, Vec3(0.0, -5.0, 0.0));
+
+        for (int i = 0; i < m_iWebSize / 4; i++)
+        {
+            int offset = i * 4;
+            float tierLength = webBaseLength * (i + 1);
+
+            // Create current tier
+            addRigidBody(webCenter + Vec3(0.0, 0.0, tierLength), webParticle, 2.0);
+            setOrientationOf(1 + offset, Quat(0.0, 0.0, 0.0));
+
+            addRigidBody(webCenter + Vec3(tierLength, 0.0, 0.0), webParticle, 2.0);
+            setOrientationOf(2 + offset, Quat(0.0, 0.0, 0.0));
+
+            addRigidBody(webCenter + Vec3(0.0, 0.0, -tierLength), webParticle, 2.0);
+            setOrientationOf(3 + offset, Quat(0.0, 0.0, 0.0));
+
+            addRigidBody(webCenter + Vec3(-tierLength, 0.0, 0.0), webParticle, 2.0);
+            setOrientationOf(4 + offset, Quat(0.0, 0.0, 0.0));
+
+            addSpring(1 + offset, 2 + offset, tierLength, 40.0);
+            addSpring(2 + offset, 3 + offset, tierLength, 40.0);
+            addSpring(3 + offset, 4 + offset, tierLength, 40.0);
+            addSpring(4 + offset, 1 + offset, tierLength, 40.0);
+
+            // Connect to previous tier
+            if (i > 0)
+            {
+                addSpring(1 + offset, 1 + offset - 4, webBaseLength, 40.0);
+                addSpring(2 + offset, 2 + offset - 4, webBaseLength, 40.0);
+                addSpring(3 + offset, 3 + offset - 4, webBaseLength, 40.0);
+                addSpring(4 + offset, 4 + offset - 4, webBaseLength, 40.0);
+            }
+            else
+            {
+                addSpring(1, 0, webBaseLength, 40.0);
+                addSpring(2, 0, webBaseLength, 40.0);
+                addSpring(3, 0, webBaseLength, 40.0);
+                addSpring(4, 0, webBaseLength, 40.0);
+            }
+        }
+        
+        addRigidBody(Vec3(), webParticle, 10.0);
         break;
     }
     }
@@ -199,7 +254,6 @@ void RigidBodySystemSimulator::simulateTimestep(float timeStep)
                 Vec3 x_a = collision.collisionPointWorld - rigidBody_a.m_position;
                 Vec3 x_b = collision.collisionPointWorld - rigidBody_b.m_position;
                 Vec3 v_rel = rigidBody_a.getVelocityOfPosition(x_a) - rigidBody_b.getVelocityOfPosition(x_b);
-                // cout << collision.normalWorld << endl;
                 if (dot(v_rel, collision.normalWorld) < 0)
                 {
                     float impulse = -(1 + m_fCoefRestitution) * dot(v_rel, collision.normalWorld) /
@@ -207,9 +261,7 @@ void RigidBodySystemSimulator::simulateTimestep(float timeStep)
                             cross(rigidBody_a.getInverseIntertiaTensor().transformVector(cross(x_a, collision.normalWorld)), x_a) +
                             cross(rigidBody_b.getInverseIntertiaTensor().transformVector(cross(x_b, collision.normalWorld)), x_b)
                             , collision.normalWorld));
-                    //cout << "before velocity" << rigidBody_a.m_linearVelocity;
                     rigidBody_a.m_linearVelocity += (impulse / rigidBody_a.m_mass) * collision.normalWorld;
-                    //cout << "after velocity" << rigidBody_a.m_linearVelocity;
                     rigidBody_b.m_linearVelocity -= (impulse / rigidBody_b.m_mass) * collision.normalWorld;
                     rigidBody_a.m_angularMomentum += cross(x_a, impulse * collision.normalWorld);
                     rigidBody_b.m_angularMomentum -= cross(x_b, impulse * collision.normalWorld);
@@ -229,14 +281,11 @@ void RigidBodySystemSimulator::simulateTimestep(float timeStep)
             {
                 cout << "Collision" << endl;
                 cout << collision.collisionPointWorld << endl;
-                // rigidBody_a.m_isCollision = true;
                 float impulse = -(1 + m_fCoefRestitution) * dot(v_rel, collision.normalWorld) /
                     (1 / rigidBody_a.m_mass + dot(
                         cross(rigidBody_a.getInverseIntertiaTensor().transformVector(cross(x_a, collision.normalWorld)), x_a)
                         , collision.normalWorld));
-                //cout << "before velocity" << rigidBody_a.m_linearVelocity << endl;
                 rigidBody_a.m_linearVelocity += (impulse / rigidBody_a.m_mass) * collision.normalWorld;
-                //cout << "after velocity" << rigidBody_a.m_linearVelocity << endl;
                 rigidBody_a.m_angularMomentum += cross(x_a, impulse * collision.normalWorld);
             }
         }
@@ -267,8 +316,6 @@ void RigidBodySystemSimulator::simulateTimestep(float timeStep)
         inverseRotMat.transpose();
         Mat4 inverseInertiaTensor = inverseRotMat * rigidBody.m_initialInverseIntertiaTensor * rotMat;
         rigidBody.m_angularVelocity = inverseInertiaTensor.transformVector(rigidBody.m_angularMomentum);
-        //cout << "linear velocity: " << rigidBody.m_linearVelocity << endl;
-        //cout << "angular velocity: " << rigidBody.m_angularVelocity << endl;
 
         rigidBody.m_internalForce = Vec3(); // reset internal force
     }
