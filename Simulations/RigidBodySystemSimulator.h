@@ -134,6 +134,7 @@ private:
 	float m_fGravity;
 	float m_fDamping;
 	RigidBody m_ground = RigidBody(1000000000000);
+	int m_iWebSize;
 
 	// UI Attributes
 	Point2D m_mouse;

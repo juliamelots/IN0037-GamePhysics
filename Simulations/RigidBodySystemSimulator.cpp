@@ -8,20 +8,21 @@ RigidBodySystemSimulator::RigidBodySystemSimulator()
     m_fCoefRestitution = 0.5;
     m_fGravity = 9.8;
     m_fDamping = 0.8;
+    m_iWebSize = 4;
 }
 
 const char* RigidBodySystemSimulator::getTestCasesStr() {
-    return "Demo 1: Simple,Demo 2: Complex,Demo 3: Net,Demo 4: Custom Net";
+    return "Demo 1: Simple,Demo 2: Complex,Demo 3: Custom Net";
 }
 
 void RigidBodySystemSimulator::initUI(DrawingUtilitiesClass* DUC)
 {
     this->DUC = DUC;
-    if (m_iTestCase == 3)
-    {
-        TwAddVarRW(DUC->g_pTweakBar, "Coefficient of Restitution", TW_TYPE_FLOAT, &m_fCoefRestitution, "step=0.1 min=0.0 max=1.0");
-        TwAddVarRW(DUC->g_pTweakBar, "Gravity", TW_TYPE_FLOAT, &m_fGravity, "step=0.1 min=0.0");
-    }
+    TwAddVarRW(DUC->g_pTweakBar, "Coefficient of Restitution", TW_TYPE_FLOAT, &m_fCoefRestitution, "step=0.1 min=0.0 max=1.0");
+    TwAddVarRW(DUC->g_pTweakBar, "Gravity", TW_TYPE_FLOAT, &m_fGravity, "step=0.1 min=0.0");
+    TwAddVarRW(DUC->g_pTweakBar, "Damping", TW_TYPE_FLOAT, &m_fDamping, "step=0.1 min=0.0");
+    if (m_iTestCase == 2)
+        TwAddVarRW(DUC->g_pTweakBar, "Web Size", TW_TYPE_INT32, &m_iWebSize, "step=4 min=4");
 }
 
 void RigidBodySystemSimulator::reset()
@@ -97,88 +98,56 @@ void RigidBodySystemSimulator::notifyCaseChanged(int testCase)
     case 2:
     {
         cout << "Demo 3: Custom Net" << endl;
-        int net = 4;
-        Vec3 center = Vec3(0.0, 2.0, 0.0);
-        Vec3 size = Vec3(0.5, 0.5, 0.5);
-        float length = 1.0;
-        addRigidBody(center, size, 2.0);
-        setOrientationOf(0, Quat(0.0, 0.0, 0.0));
 
-        for (int i = 0; i < net/4; i++)
+        Vec3 webCenter = Vec3(0.0, 2.0, 0.0);
+        Vec3 webSize = Vec3(0.5, 0.5, 0.5);
+        float webBaseLength = 1.0;
+
+        addRigidBody(webCenter, webSize, 2.0);
+        setOrientationOf(0, Quat(0.0, 0.0, 0.0));
+        setVelocityOf(0, Vec3(0.3, -8, 10.0));
+
+        for (int i = 0; i < m_iWebSize / 4; i++)
         {
             int offset = i * 4;
-            addRigidBody(center + Vec3(0.0, length * i, 0.0), size, 2.0);
+            float tierLength = webBaseLength * (i + 1);
+
+            // Create current tier
+            addRigidBody(webCenter + Vec3(0.0, tierLength, 0.0), webSize, 2.0);
             setOrientationOf(1 + offset, Quat(0.0, 0.0, 0.0));
 
-            addRigidBody(center + Vec3(length * i, 0.0, 0.0), size, 2.0);
+            addRigidBody(webCenter + Vec3(tierLength, 0.0, 0.0), webSize, 2.0);
             setOrientationOf(2 + offset, Quat(0.0, 0.0, 0.0));
 
-            addRigidBody(center + Vec3(0.0, -length * i, 0.0), size, 2.0);
+            addRigidBody(webCenter + Vec3(0.0, -tierLength, 0.0), webSize, 2.0);
             setOrientationOf(3 + offset, Quat(0.0, 0.0, 0.0));
 
-            addRigidBody(center + Vec3(-length * i, 0.0, 0.0), size, 2.0);
+            addRigidBody(webCenter + Vec3(-tierLength, 0.0, 0.0), webSize, 2.0);
             setOrientationOf(4 + offset, Quat(0.0, 0.0, 0.0));
-            cout << "added rb" << endl;
-            addSpring(1 + offset, 2 + offset, length * i, 40.0);
-            addSpring(2 + offset, 3 + offset, length * i, 40.0);
-            addSpring(3 + offset, 4 + offset, length * i, 40.0);
-            addSpring(4 + offset, 1 + offset, length * i, 40.0);
-            cout << "added s1" << endl;
 
+            addSpring(1 + offset, 2 + offset, tierLength, 40.0);
+            addSpring(2 + offset, 3 + offset, tierLength, 40.0);
+            addSpring(3 + offset, 4 + offset, tierLength, 40.0);
+            addSpring(4 + offset, 1 + offset, tierLength, 40.0);
+
+            // Connect to previous tier
             if (i > 0)
             {
-                addSpring(1 + offset, 1 + offset  -  4, length, 40.0);
-                addSpring(2 + offset, 2 + offset  -  4, length, 40.0);
-                addSpring(3 + offset, 3 + offset  -  4, length, 40.0);
-                addSpring(4 + offset, 4 + offset  -  4, length, 40.0);
+                addSpring(1 + offset, 1 + offset  -  4, webBaseLength, 40.0);
+                addSpring(2 + offset, 2 + offset  -  4, webBaseLength, 40.0);
+                addSpring(3 + offset, 3 + offset  -  4, webBaseLength, 40.0);
+                addSpring(4 + offset, 4 + offset  -  4, webBaseLength, 40.0);
             }
             else
             {
-                addSpring(1 + offset, 0, length, 40.0);
-                addSpring(2 + offset, 0, length, 40.0);
-                addSpring(3 + offset, 0, length, 40.0);
-                addSpring(4 + offset, 0, length, 40.0);
-                cout << "added s2" << endl;
+                addSpring(1, 0, webBaseLength, 40.0);
+                addSpring(2, 0, webBaseLength, 40.0);
+                addSpring(3, 0, webBaseLength, 40.0);
+                addSpring(4, 0, webBaseLength, 40.0);
             }
         }
         break;
     }
-    //case 2:
-    //{
-    //    cout << "Demo 3: Net" << endl;
-    //    Vec3 center = Vec3(0.0, 2.0, 0.0);
-    //    Vec3 size = Vec3(0.5, 0.5, 0.5);
-    //    float length = 1.0;
-    //    addRigidBody(center, size, 2.0);
-    //    setOrientationOf(0, Quat(0.0, 0.0, 0.0));
-    //    setVelocityOf(0, Vec3(0.0, 0.1f, 0.0));
-
-    //    addRigidBody(center + Vec3(0.0, length, 0.0), size, 2.0);
-    //    setOrientationOf(1, Quat(0.0, 0.0, 0.0));
-    //    setVelocityOf(1, Vec3(0.0, -0.1f, 0.0));
-
-    //    addRigidBody(center + Vec3(length, 0.0, 0.0), size, 2.0);
-    //    setOrientationOf(2, Quat(0.0, 0.0, 0.0));
-    //    setVelocityOf(2, Vec3(0.0, -0.2f, 0.0));
-
-    //    addRigidBody(center + Vec3(0.0, -length, 0.0), size, 2.0);
-    //    setOrientationOf(3, Quat(0.0, 0.0, 0.0));
-    //    setVelocityOf(3, Vec3(0.0, -0.3f, 0.0));
-
-    //    addRigidBody(center + Vec3(-length, 0.0, 0.0), size, 2.0);
-    //    setOrientationOf(4, Quat(0.0, 0.0, 0.0));
-    //    setVelocityOf(4, Vec3(0.0, -0.3f, 0.0));
-
-    //    addSpring(0, 1, length, 40.0);
-    //    addSpring(0, 2, length, 40.0);
-    //    addSpring(0, 3, length, 40.0);
-    //    addSpring(0, 4, length, 40.0);
-    //    addSpring(1, 2, length, 40.0);
-    //    addSpring(2, 3, length, 40.0);
-    //    addSpring(3, 4, length, 40.0);
-    //    addSpring(4, 1, length, 40.0);
-    //    break;
-    //}
     }
 }
 
